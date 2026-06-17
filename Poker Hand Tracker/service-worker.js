@@ -1,4 +1,4 @@
-const CACHE = 'pht-v3';
+const CACHE = 'pht-v5';
 const SHELL = ['/index.html'];
 
 self.addEventListener('install', e => {

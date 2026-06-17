@@ -370,99 +370,55 @@ tbody tr:last-child td{border-bottom:none}
   background:var(--accent);border-color:var(--accent);color:#04140b;
 }
 
-/* SVG Poker table */
-.hc-table{margin:0 0 12px;border-radius:14px;overflow:hidden;background:var(--bg)}
-/* Seats row fallback (no board) */
-.hc-seats-row{
-  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-  padding:10px 12px;background:var(--surface);border-radius:10px;margin-bottom:12px;
+/* Seats strip — Hero + rivales */
+.seats-strip{
+  display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;margin-bottom:14px;
 }
-.hc-seat{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-.hc-pos-badge{
+.seat{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:9px 12px;border-radius:12px;
+  background:var(--surface);border:1px solid var(--border);
+}
+.seat.hero{
+  background:linear-gradient(135deg,rgba(0,255,136,.1),rgba(0,255,136,.02));
+  border-color:rgba(0,255,136,.25);
+}
+.seat-pos{
   padding:3px 9px;border-radius:7px;font-size:11px;font-weight:800;letter-spacing:.03em;white-space:nowrap;
+  background:var(--surface-2);color:var(--text);border:1px solid var(--border);
 }
-.hc-pos-badge.hero{background:rgba(0,255,136,.18);color:var(--accent);border:1px solid rgba(0,255,136,.3)}
-.hc-pos-badge.rival{background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
-.hc-type{font-size:11px;color:var(--muted)}
-.hc-vs{color:var(--faint);font-size:12px;font-weight:700;letter-spacing:.08em}
-/* Street rows */
-.hc-streets{display:flex;flex-direction:column;gap:2px}
-.hs-row{display:flex;align-items:center;gap:8px;padding:4px 0;flex-wrap:wrap}
-.hs-lbl{
-  flex-shrink:0;font-size:9px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
-  background:rgba(0,255,136,.1);color:var(--accent);border-radius:5px;padding:2px 7px;
+.seat-pos.hero{background:rgba(0,255,136,.2);color:var(--accent);border-color:rgba(0,255,136,.35)}
+.seat-name{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-weight:600}
+.seat.hero .seat-name{color:var(--accent)}
+.seat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* Street blocks */
+.hc-streets{display:flex;flex-direction:column;gap:10px}
+.street-block{
+  border-left:2px solid var(--border);padding:2px 0 2px 14px;position:relative;
 }
-.hs-act{font-size:12.5px;color:var(--muted);line-height:1.4}
-.hc-notes{font-size:12px;color:var(--faint);font-style:italic;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.street-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.street-tag{
+  flex-shrink:0;font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 9px;border-radius:6px;
+  background:rgba(255,255,255,.06);color:var(--muted);
+}
+.street-tag.street-preflop{background:rgba(139,143,154,.14);color:#b6bac4}
+.street-tag.street-flop{background:rgba(0,255,136,.12);color:var(--accent)}
+.street-tag.street-turn{background:rgba(91,141,239,.16);color:#8fb4ff}
+.street-tag.street-river{background:rgba(245,197,24,.14);color:var(--gold)}
+.street-tag.street-showdown{background:rgba(255,93,93,.14);color:#ff9a9a}
+.street-action{
+  font-size:13px;color:var(--muted);line-height:1.55;margin:7px 0 0;
+}
+.hc-notes{
+  font-size:12.5px;color:var(--faint);font-style:italic;line-height:1.55;
+  margin-top:14px;padding-top:12px;border-top:1px solid var(--border);
+}
 /* Cards inline */
 .cards-inline{display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap}
-
-/* ---------- Hand Replayer ---------- */
-.replayer-back{
-  position:fixed;inset:0;background:rgba(0,0,0,.9);backdrop-filter:blur(10px);
-  display:grid;place-items:center;padding:16px;z-index:100;animation:rise .2s;
-}
-.replayer-wrap{
-  width:100%;max-width:680px;
-  background:#09090c;
-  border:1px solid rgba(255,255,255,.1);
-  border-radius:24px;overflow:hidden;
-  box-shadow:0 40px 100px rgba(0,0,0,.9),0 0 0 1px rgba(0,255,136,.06);
-}
-.replayer-header{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.07);
-}
-.rp-meta{display:flex;align-items:center;gap:10px}
-.rp-pos-badge{
-  padding:4px 11px;border-radius:8px;font-size:12px;font-weight:800;letter-spacing:.04em;
-  background:rgba(0,255,136,.15);color:var(--accent);border:1px solid rgba(0,255,136,.25);
-}
-.rp-subtitle{font-size:12px;color:var(--faint);font-weight:600}
-.replayer-table{background:#040608;line-height:0}
-.rp-streets{
-  display:flex;gap:6px;padding:12px 20px;
-  border-bottom:1px solid rgba(255,255,255,.06);flex-wrap:wrap;
-}
-.rp-pill{
-  padding:4px 12px;border-radius:20px;font-size:10px;font-weight:800;
-  letter-spacing:.1em;text-transform:uppercase;
-  background:rgba(255,255,255,.05);color:var(--faint);transition:.15s;cursor:default;
-}
-.rp-pill.active{background:rgba(0,255,136,.18);color:var(--accent);box-shadow:0 0 12px rgba(0,255,136,.18)}
-.rp-pill.done{background:rgba(0,255,136,.07);color:rgba(0,255,136,.4)}
-.rp-action-box{
-  padding:14px 20px;min-height:68px;
-  border-bottom:1px solid rgba(255,255,255,.06);
-}
-.rp-action-text{font-size:13.5px;color:var(--muted);line-height:1.6;margin:0}
-.rp-controls{
-  display:flex;align-items:center;justify-content:center;
-  gap:28px;padding:16px 20px;
-}
-.rp-nav-btn{
-  width:50px;height:50px;border-radius:50%;
-  border:1.5px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.04);color:var(--muted);
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;transition:.18s;font-family:inherit;
-}
-.rp-nav-btn:hover:not([disabled]){
-  border-color:var(--accent);background:rgba(0,255,136,.12);color:var(--accent);
-}
-.rp-nav-btn[disabled]{opacity:.25;cursor:default}
-.rp-nav-btn svg{width:22px;height:22px}
-.rp-counter{
-  font-size:22px;font-weight:800;color:var(--text);
-  letter-spacing:-.02em;font-variant-numeric:tabular-nums;
-}
-.rp-total{font-size:14px;color:var(--faint);font-weight:600}
-.rp-play-btn{color:var(--accent)!important}
-@media(max-width:640px){
-  .replayer-wrap{border-radius:18px}
-  .rp-counter{font-size:18px}
-  .rp-nav-btn{width:44px;height:44px}
-}
+/* Carta nueva en cada calle: resaltada */
+.crd.crd-new{box-shadow:0 3px 10px rgba(0,0,0,.5),0 0 0 2px var(--accent),inset 0 1px 0 rgba(255,255,255,.7)}
 
 /* ---------- Loader ---------- */
 .loader{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);z-index:100}

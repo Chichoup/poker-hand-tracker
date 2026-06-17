@@ -23,14 +23,15 @@
     return ((str||'').match(/[AKQJTakqjt2-9][cdhs]/gi)||[]).map(c=>c[0].toUpperCase()+c[1].toLowerCase());
   }
   const SUIT_SYMS = {c:'♣',d:'♦',h:'♥',s:'♠'};
+  function oneCard(c, mini, isNew) {
+    const suit=c.slice(-1), rank=c.slice(0,-1), sym=SUIT_SYMS[suit]||suit;
+    const cls = 'crd' + (mini ? ' crd-mini' : '') + (isNew ? ' crd-new' : '');
+    return `<div class="${cls} suit-${suit}"><div class="crd-tl">${rank}<span>${sym}</span></div><div class="crd-mid">${sym}</div></div>`;
+  }
   function renderCards(str, mini) {
     const cards = parseCards(str);
     if (!cards.length) return '';
-    const cls = 'crd' + (mini ? ' crd-mini' : '');
-    return `<div class="cards-inline">${cards.map(c=>{
-      const suit=c.slice(-1), rank=c.slice(0,-1), sym=SUIT_SYMS[suit]||suit;
-      return `<div class="${cls} suit-${suit}"><div class="crd-tl">${rank}<span>${sym}</span></div><div class="crd-mid">${sym}</div></div>`;
-    }).join('')}</div>`;
+    return `<div class="cards-inline">${cards.map(c=>oneCard(c, mini, false)).join('')}</div>`;
   }
   function cardBacks(n, mini) {
     const cls = 'crd crd-back' + (mini ? ' crd-mini' : '');
@@ -897,104 +898,38 @@
     'Regular pasivo':'#9b59b6','Nit':'#95a5a6','Maniac':'#c0392b','LAG':'#f39c12','TAG':'#2980b9','Desconocido':'#5b5f6a'
   };
 
-  function pokerTableSvg(h) {
-    const W=520, H=270, cx=W/2, cy=H/2;
-    const rx=164, ry=90, prx=216, pry=120;
-    const POS_DEG = {'BB':0,'UTG':36,'UTG+1':72,'UTG+2':108,'MP':144,'MP+1':180,'HJ':216,'CO':252,'BTN':288,'SB':324};
-    const heroRaw = POS_DEG[h.hero_position] ?? 288;
-    const rot = 180 - heroRaw;
-    const ang = pos => (((POS_DEG[pos]??0) + rot) % 360 + 360) % 360;
-    const posXY = (deg, rx_, ry_) => {
-      const r = (deg - 90) * Math.PI / 180;
-      return { x: cx + rx_ * Math.cos(r), y: cy + ry_ * Math.sin(r) };
-    };
-    const SC = {c:'#1a7a30',d:'#cc1111',h:'#cc1111',s:'#111827'};
-    const SS = {c:'♣',d:'♦',h:'♥',s:'♠'};
-
-    function mCard(card, x, y, w=22, h_=31) {
-      const suit=card.slice(-1), rank=card.slice(0,-1), col=SC[suit]||'#333', sym=SS[suit]||'?';
-      return `<rect x="${x}" y="${y}" width="${w}" height="${h_}" rx="3.5" fill="#faf9f0" stroke="rgba(0,0,0,.18)" stroke-width=".6"/>
-        <text x="${x+w*.5}" y="${y+h_*.36}" text-anchor="middle" font-size="${w*.44}" font-weight="bold" fill="${col}" font-family="Georgia,serif">${rank}</text>
-        <text x="${x+w*.5}" y="${y+h_*.72}" text-anchor="middle" font-size="${w*.5}" fill="${col}" font-family="Georgia,serif">${sym}</text>`;
-    }
-    function mBacks(n, x, y, w=16, h_=22) {
-      return Array(n).fill(0).map((_,i)=>`<rect x="${x+i*(w*.65)}" y="${y}" width="${w}" height="${h_}" rx="2.5" fill="#1a3a7a" stroke="rgba(255,255,255,.12)" stroke-width=".5"/>
-        <rect x="${x+i*(w*.65)+2}" y="${y+2}" width="${w-4}" height="${h_-4}" rx="1.5" fill="none" stroke="rgba(255,255,255,.2)" stroke-width=".5"/>`).join('');
-    }
-
-    let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:215px">
-      <defs>
-        <radialGradient id="tblFelt${h.id||0}" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#1e5c30"/><stop offset="100%" stop-color="#0d2e18"/></radialGradient>
-      </defs>
-      <ellipse cx="${cx}" cy="${cy+5}" rx="${rx+14}" ry="${ry+14}" fill="rgba(0,0,0,.35)"/>
-      <ellipse cx="${cx}" cy="${cy}" rx="${rx+12}" ry="${ry+12}" fill="#3d2008"/>
-      <ellipse cx="${cx}" cy="${cy}" rx="${rx+10}" ry="${ry+10}" fill="none" stroke="rgba(255,200,100,.08)" stroke-width="1.5"/>
-      <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#tblFelt${h.id||0})"/>
-      <ellipse cx="${cx}" cy="${cy-8}" rx="${rx*.5}" ry="${ry*.3}" fill="rgba(255,255,255,.022)"/>`;
-
-    // Board cards center
-    const bCards = [...parseCards(h.flop_board||''), ...parseCards(h.turn_card||''), ...parseCards(h.river_card||'')];
-    if (bCards.length) {
-      const cw=24, ch=34, g=5; const tw=bCards.length*(cw+g)-g; let bx=cx-tw/2;
-      bCards.forEach((c,i)=>{ if(i===3)bx+=6; s+=mCard(c,bx,cy-ch/2,cw,ch); bx+=cw+g; });
-    } else {
-      s+=`<text x="${cx}" y="${cy+5}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.13)" font-family="Inter,sans-serif" letter-spacing=".12em">COMUNIDAD</text>`;
-    }
-
-    // Hero seat (always at bottom)
-    const hxy = posXY(180, prx, pry);
-    s+=`<circle cx="${hxy.x}" cy="${hxy.y}" r="25" fill="rgba(0,255,136,.1)" stroke="#00ff88" stroke-width="1.5"/>`;
-    s+=`<text x="${hxy.x}" y="${hxy.y-7}" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#00ff88" font-family="Inter,sans-serif">${esc(h.hero_position||'?')}</text>`;
-    s+=`<text x="${hxy.x}" y="${hxy.y+5}" text-anchor="middle" font-size="7.5" fill="rgba(0,255,136,.55)" font-family="Inter,sans-serif">Hero</text>`;
-    const hc = parseCards(h.hero_cards||'');
-    if (hc.length) {
-      const cw=18,ch=25,tw=hc.length*(cw+2)-2;
-      hc.forEach((c,i)=>{ s+=mCard(c, hxy.x-tw/2+i*(cw+2), hxy.y+12, cw, ch); });
-    }
-
-    // Rival seats
-    (h.players||[]).forEach(p=>{
-      const a=ang(p.pos);
-      const xy=posXY(a,prx,pry);
-      const col=TYPE_COLORS[p.type]||'#5b5f6a';
-      s+=`<circle cx="${xy.x}" cy="${xy.y}" r="21" fill="rgba(0,0,0,.28)" stroke="${col}" stroke-width="1"/>`;
-      s+=`<text x="${xy.x}" y="${xy.y-4}" text-anchor="middle" font-size="9" font-weight="bold" fill="rgba(255,255,255,.88)" font-family="Inter,sans-serif">${esc(p.pos)}</text>`;
-      const typeShort = (p.type||'?').replace(' agresivo',' Ag').replace(' pasivo',' Ps');
-      s+=`<text x="${xy.x}" y="${xy.y+7}" text-anchor="middle" font-size="7" fill="${col}" font-family="Inter,sans-serif">${esc(typeShort)}</text>`;
-      const pc=parseCards(p.cards||'');
-      if(pc.length && p.showed!==false) { const cw=14,ch=20,tw=pc.length*(cw+1)-1; pc.forEach((c,i)=>{s+=mCard(c,xy.x-tw/2+i*(cw+1),xy.y+11,cw,ch);}); }
-      else if(pc.length) { s+=mBacks(pc.length, xy.x-11, xy.y+11, 13, 18); }
-    });
-
-    s+='</svg>';
-    return s;
-  }
-
-  function streetLine(lbl, cards, action, skipCards) {
-    if (!cards && !action) return '';
-    return `<div class="hs-row">
-      <span class="hs-lbl">${lbl}</span>
-      ${cards && !skipCards ? renderCards(cards, true) : ''}
-      ${action ? `<span class="hs-act">${esc(action.slice(0,90))}${action.length>90?'…':''}</span>` : ''}
+  // Fila de jugadores: Hero + rivales con sus posiciones, tipos y cartas
+  function seatsStrip(h) {
+    const hero = `<div class="seat hero">
+      <span class="seat-pos hero">${esc(h.hero_position||'?')}</span>
+      <span class="seat-name">Hero</span>
+      ${h.hero_cards ? renderCards(h.hero_cards) : ''}
     </div>`;
-  }
-
-  function heroAndRivalsRow(h) {
     const rivals = (h.players||[]).map(p => {
       const pc = parseCards(p.cards||'');
+      const col = TYPE_COLORS[p.type] || '#5b5f6a';
       const cardHtml = pc.length ? (p.showed !== false ? renderCards(p.cards, true) : cardBacks(pc.length, true)) : '';
-      return `<div class="hc-seat rival">
-        <span class="hc-pos-badge rival">${esc(p.pos)}</span>
-        <span class="hc-type">${esc(p.type||'?')}</span>
+      return `<div class="seat">
+        <span class="seat-pos">${esc(p.pos)}</span>
+        <span class="seat-name"><span class="seat-dot" style="background:${col}"></span>${esc(p.type||'Desconocido')}</span>
         ${cardHtml}
       </div>`;
     }).join('');
-    return `<div class="hc-seats-row">
-      <div class="hc-seat hero">
-        <span class="hc-pos-badge hero">${esc(h.hero_position||'?')}</span>
-        ${h.hero_cards ? renderCards(h.hero_cards) : ''}
+    return `<div class="seats-strip">${hero}${rivals}</div>`;
+  }
+
+  // Bloque de calle: etiqueta + board acumulado (carta nueva resaltada) + acción
+  function streetBlock(label, boardArr, newCount, action) {
+    if (!boardArr.length && !action) return '';
+    const total = boardArr.length;
+    const board = total ? `<div class="cards-inline">${boardArr.map((c,i)=>
+      oneCard(c, false, i >= total - newCount)).join('')}</div>` : '';
+    return `<div class="street-block">
+      <div class="street-top">
+        <span class="street-tag street-${label.toLowerCase()}">${label}</span>
+        ${board}
       </div>
-      ${rivals ? `<span class="hc-vs">vs</span>${rivals}` : ''}
+      ${action ? `<p class="street-action">${esc(action)}</p>` : ''}
     </div>`;
   }
 
@@ -1014,11 +949,18 @@
 
     $('#hands-empty').classList.toggle('hidden', rows.length > 0);
 
-    const hasBoardOrPlayers = h => parseCards(h.flop_board||'').length || (h.players||[]).length || h.hero_cards;
-
     $('#hands-list').innerHTML = rows.map(h => {
-      const useSvg = hasBoardOrPlayers(h);
-      const skipBoardInStreets = useSvg;
+      const flop  = parseCards(h.flop_board||'');
+      const turn  = parseCards(h.turn_card||'');
+      const river = parseCards(h.river_card||'');
+
+      const streets = [
+        streetBlock('PREFLOP', [], 0, h.preflop),
+        streetBlock('FLOP',  flop,                  flop.length, h.flop_action),
+        streetBlock('TURN',  [...flop,...turn],     turn.length, h.turn_action),
+        streetBlock('RIVER', [...flop,...turn,...river], river.length, h.river_action),
+        streetBlock('SHOWDOWN', [], 0, h.result_notes),
+      ].filter(Boolean).join('');
 
       return `<div class="hand-card${h.reviewed?' reviewed':''}">
         <div class="hand-card-head">
@@ -1031,27 +973,19 @@
               <div class="rev-box-icon">${h.reviewed?'✓':''}</div>
               ${h.reviewed?'Revisada':'Revisar'}
             </button>
-            <button class="icon-btn rp-play-btn" data-hrep="${esc(h.id)}" title="Reproducir mano"><svg viewBox="0 0 16 16" fill="currentColor" style="width:14px;height:14px"><path d="M4 2.5l9 5.5-9 5.5V2.5z"/></svg></button>
             <button class="icon-btn" data-hedit="${esc(h.id)}" title="Editar">✎</button>
             <button class="icon-btn danger" data-hdel="${esc(h.id)}" title="Eliminar">🗑</button>
           </div>
         </div>
-        ${useSvg ? `<div class="hc-table">${pokerTableSvg(h)}</div>` : heroAndRivalsRow(h)}
-        <div class="hc-streets">
-          ${streetLine('PRE', null, h.preflop)}
-          ${streetLine('FLOP', h.flop_board, h.flop_action, skipBoardInStreets)}
-          ${streetLine('TURN', h.turn_card, h.turn_action, skipBoardInStreets)}
-          ${streetLine('RIVER', h.river_card, h.river_action, skipBoardInStreets)}
-          ${streetLine('RES', null, h.result_notes)}
-        </div>
-        ${h.notes ? `<div class="hc-notes">📝 ${esc(h.notes.slice(0,120))}${h.notes.length>120?'…':''}</div>` : ''}
+        ${seatsStrip(h)}
+        ${streets ? `<div class="hc-streets">${streets}</div>` : ''}
+        ${h.notes ? `<div class="hc-notes">📝 ${esc(h.notes)}</div>` : ''}
       </div>`;
     }).join('');
 
     $$('[data-hedit]').forEach(b => b.onclick = () => openHandModal(b.dataset.hedit));
     $$('[data-hdel]').forEach(b => b.onclick = () => removeHand(b.dataset.hdel));
     $$('[data-hrev]').forEach(b => b.onclick = () => toggleHandReviewed(b.dataset.hrev));
-    $$('[data-hrep]').forEach(b => b.onclick = () => openHandReplayer(b.dataset.hrep));
   }
 
   async function toggleHandReviewed(id) {
@@ -1249,146 +1183,6 @@
         save.disabled = false; save.textContent = 'Reintentar';
       }
     };
-  }
-
-  // ============================================================
-  //  HAND REPLAYER
-  // ============================================================
-  function openHandReplayer(id) {
-    const h = state.hands.find(x => x.id === id);
-    if (!h) return;
-
-    function buildSteps(h) {
-      const flop = parseCards(h.flop_board||'');
-      const turn = parseCards(h.turn_card||'');
-      const river = parseCards(h.river_card||'');
-      const s = [];
-      s.push({ street:'PREFLOP', board:[], action:h.preflop||'', showdown:false });
-      if (flop.length || h.flop_action)   s.push({ street:'FLOP',     board:[...flop],                   action:h.flop_action||'',  showdown:false });
-      if (turn.length || h.turn_action)   s.push({ street:'TURN',     board:[...flop,...turn],            action:h.turn_action||'',  showdown:false });
-      if (river.length || h.river_action) s.push({ street:'RIVER',    board:[...flop,...turn,...river],   action:h.river_action||'', showdown:false });
-      if (h.result_notes)                 s.push({ street:'SHOWDOWN', board:[...flop,...turn,...river],   action:h.result_notes||'', showdown:true  });
-      return s;
-    }
-
-    const steps = buildSteps(h);
-    let cur = 0;
-    const host = $('#modal-host');
-
-    function rpTableSvg(step) {
-      const W=680, H=360, cx=W/2, cy=H/2;
-      const rx=204, ry=112, prx=266, pry=148;
-      const PD={'BB':0,'UTG':36,'UTG+1':72,'UTG+2':108,'MP':144,'MP+1':180,'HJ':216,'CO':252,'BTN':288,'SB':324};
-      const heroRaw=PD[h.hero_position]??288, rot=180-heroRaw;
-      const ang=pos=>(((PD[pos]??0)+rot)%360+360)%360;
-      const xy=(deg,rx_,ry_)=>{const r=(deg-90)*Math.PI/180;return{x:cx+rx_*Math.cos(r),y:cy+ry_*Math.sin(r)};};
-      const SC={c:'#1a7a30',d:'#cc1111',h:'#cc1111',s:'#0f1726'};
-      const SS={c:'♣',d:'♦',h:'♥',s:'♠'};
-
-      function card(c,x,y,w=28,h_=40){
-        const suit=c.slice(-1),rank=c.slice(0,-1),col=SC[suit]||'#333',sym=SS[suit]||'?';
-        return `<rect x="${x}" y="${y}" width="${w}" height="${h_}" rx="4.5" fill="#faf9f0" stroke="rgba(0,0,0,.18)" stroke-width=".7"/>
-          <text x="${x+w/2}" y="${y+h_*.38}" text-anchor="middle" font-size="${w*.46}" font-weight="bold" fill="${col}" font-family="Georgia,serif">${rank}</text>
-          <text x="${x+w/2}" y="${y+h_*.76}" text-anchor="middle" font-size="${w*.52}" fill="${col}" font-family="Georgia,serif">${sym}</text>`;
-      }
-      function back(x,y,w=20,h_=30){
-        return `<rect x="${x}" y="${y}" width="${w}" height="${h_}" rx="3.5" fill="#1e3d8a" stroke="rgba(255,255,255,.14)" stroke-width=".6"/>
-          <rect x="${x+2}" y="${y+2}" width="${w-4}" height="${h_-4}" rx="2" fill="none" stroke="rgba(255,255,255,.2)" stroke-width=".5"/>`;
-      }
-
-      let s=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">
-        <defs>
-          <radialGradient id="rpF" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#1a5028"/><stop offset="80%" stop-color="#0e2c15"/><stop offset="100%" stop-color="#081609"/>
-          </radialGradient>
-        </defs>
-        <ellipse cx="${cx}" cy="${cy+7}" rx="${rx+18}" ry="${ry+18}" fill="rgba(0,0,0,.55)"/>
-        <ellipse cx="${cx}" cy="${cy}" rx="${rx+14}" ry="${ry+14}" fill="#281503"/>
-        <ellipse cx="${cx}" cy="${cy}" rx="${rx+12}" ry="${ry+12}" fill="none" stroke="rgba(220,160,60,.12)" stroke-width="2.5"/>
-        <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#rpF)"/>
-        <ellipse cx="${cx}" cy="${cy}" rx="${rx-2}" ry="${ry-2}" fill="none" stroke="rgba(255,255,255,.04)" stroke-width="1.5"/>
-        <ellipse cx="${cx}" cy="${cy-12}" rx="${rx*.48}" ry="${ry*.28}" fill="rgba(255,255,255,.018)"/>`;
-
-      // Community cards
-      if (step.board.length) {
-        const cw=30,ch=44,g=6,tw=step.board.length*(cw+g)-g;let bx=cx-tw/2;
-        step.board.forEach((c,i)=>{if(i===3)bx+=8;s+=card(c,bx,cy-ch/2,cw,ch);bx+=cw+g;});
-      } else {
-        const cw=28,ch=40,g=5;let bx=cx-(5*(cw+g)-g)/2;
-        for(let i=0;i<5;i++){if(i===3)bx+=6;s+=`<rect x="${bx}" y="${cy-ch/2}" width="${cw}" height="${ch}" rx="4" fill="rgba(255,255,255,.035)" stroke="rgba(255,255,255,.09)" stroke-width="1" stroke-dasharray="4,3"/>`;bx+=cw+g;}
-      }
-
-      // Dealer button at BTN position
-      const dxy=xy(ang('BTN'),prx*.82,pry*.82);
-      s+=`<circle cx="${dxy.x}" cy="${dxy.y}" r="10" fill="#d4d0c8" stroke="rgba(0,0,0,.3)" stroke-width="1"/>
-          <text x="${dxy.x}" y="${dxy.y+4}" text-anchor="middle" font-size="8.5" font-weight="bold" fill="#111" font-family="Inter,sans-serif">D</text>`;
-
-      // Hero seat
-      const hpos=xy(180,prx,pry);
-      s+=`<circle cx="${hpos.x}" cy="${hpos.y}" r="28" fill="rgba(0,255,136,.07)" stroke="rgba(0,255,136,.25)" stroke-width="1.5"/>`;
-      s+=`<circle cx="${hpos.x}" cy="${hpos.y}" r="24" fill="#111e16" stroke="#00ff88" stroke-width="1.5"/>`;
-      s+=`<text x="${hpos.x}" y="${hpos.y-6}" text-anchor="middle" font-size="10" font-weight="bold" fill="#00ff88" font-family="Inter,sans-serif">${esc(h.hero_position||'?')}</text>`;
-      s+=`<text x="${hpos.x}" y="${hpos.y+7}" text-anchor="middle" font-size="7" fill="rgba(0,255,136,.55)" font-family="Inter,sans-serif">HERO</text>`;
-      const hc=parseCards(h.hero_cards||'');
-      if(hc.length){const cw=26,ch=38,g=4,tw=hc.length*(cw+g)-g;hc.forEach((c,i)=>{s+=card(c,hpos.x-tw/2+i*(cw+g),hpos.y+20,cw,ch);});}
-
-      // Rivals
-      (h.players||[]).forEach(p=>{
-        const a=ang(p.pos),pxy=xy(a,prx,pry),col=TYPE_COLORS[p.type]||'#5b5f6a';
-        s+=`<circle cx="${pxy.x}" cy="${pxy.y}" r="24" fill="#12121a" stroke="${col}" stroke-width="1"/>`;
-        s+=`<text x="${pxy.x}" y="${pxy.y-5}" text-anchor="middle" font-size="9.5" font-weight="bold" fill="rgba(255,255,255,.9)" font-family="Inter,sans-serif">${esc(p.pos)}</text>`;
-        const ts=(p.type||'?').replace(' agresivo',' Ag').replace(' pasivo',' Ps').replace('Regular','Reg').replace('Desconocido','?');
-        s+=`<text x="${pxy.x}" y="${pxy.y+7}" text-anchor="middle" font-size="6.5" fill="${col}" font-family="Inter,sans-serif">${esc(ts)}</text>`;
-        const pc=parseCards(p.cards||'');
-        if(pc.length){
-          const cw=17,ch=25,tw=pc.length*(cw+3)-3;
-          if(step.showdown&&p.showed!==false){pc.forEach((c,i)=>{s+=card(c,pxy.x-tw/2+i*(cw+3),pxy.y+16,cw,ch);});}
-          else{pc.forEach((_,i)=>{s+=back(pxy.x-tw/2+i*(cw+3),pxy.y+16,cw,ch);});}
-        }
-      });
-
-      s+='</svg>';return s;
-    }
-
-    function render() {
-      const step=steps[cur],isFirst=cur===0,isLast=cur===steps.length-1;
-      host.innerHTML=`<div class="replayer-back" id="rp-back">
-        <div class="replayer-wrap">
-          <div class="replayer-header">
-            <div class="rp-meta">
-              <span class="rp-pos-badge">${esc(h.hero_position||'?')}</span>
-              <span class="rp-subtitle">${esc(h.stakes||'')}${h.played_on?' · '+esc(h.played_on):''}</span>
-            </div>
-            <button class="icon-btn" id="rp-close">✕</button>
-          </div>
-          <div class="replayer-table">${rpTableSvg(step)}</div>
-          <div class="rp-streets">
-            ${steps.map((s,i)=>`<span class="rp-pill${i===cur?' active':i<cur?' done':''}">${s.street}</span>`).join('')}
-          </div>
-          <div class="rp-action-box">
-            <p class="rp-action-text">${step.action?esc(step.action):'<span style="color:var(--faint);font-style:italic">Sin acción registrada para esta calle.</span>'}</p>
-          </div>
-          <div class="rp-controls">
-            <button class="rp-nav-btn" id="rp-prev" ${isFirst?'disabled':''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,18 9,12 15,6"/></svg></button>
-            <span class="rp-counter">${cur+1}<span class="rp-total"> / ${steps.length}</span></span>
-            <button class="rp-nav-btn" id="rp-next" ${isLast?'disabled':''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9,18 15,12 9,6"/></svg></button>
-          </div>
-        </div>
-      </div>`;
-
-      const close=()=>{host.innerHTML='';document.onkeydown=null;};
-      $('#rp-close').onclick=close;
-      $('#rp-back').onclick=e=>{if(e.target.id==='rp-back')close();};
-      if(!isFirst) $('#rp-prev').onclick=()=>{cur--;render();};
-      if(!isLast)  $('#rp-next').onclick=()=>{cur++;render();};
-      document.onkeydown=e=>{
-        if(!$('#rp-back'))return;
-        if(e.key==='ArrowRight'&&!isLast){cur++;render();}
-        if(e.key==='ArrowLeft'&&!isFirst){cur--;render();}
-        if(e.key==='Escape')close();
-      };
-    }
-    render();
   }
 
   function bindRemoveButtons() {

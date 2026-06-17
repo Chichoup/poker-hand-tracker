@@ -9,7 +9,7 @@
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
   // ---- estado global ----
-  const state = { user: null, cfg: null, sessions: [], hands: [], monthSel: C.monthKey(), entered: false };
+  const state = { user: null, cfg: null, sessions: [], hands: [], monthSel: C.monthKey(), entered: false, showReviewed: false };
 
   const MOOD_COLORS = { 1: '#ff5d5d', 2: '#ff8c42', 3: '#f5c518', 4: '#9be15d', 5: '#00ff88' };
   const CARD_RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
@@ -21,6 +21,15 @@
   ];
   function parseCards(str) {
     return ((str||'').match(/[AKQJTakqjt2-9][cdhs]/gi)||[]).map(c=>c[0].toUpperCase()+c[1].toLowerCase());
+  }
+  function renderCards(str, mini) {
+    const cards = parseCards(str);
+    if (!cards.length) return '';
+    const cls = mini ? 'crd crd-mini' : 'crd';
+    return `<div class="cards-inline">${cards.map(c=>{
+      const suit=c.slice(-1), rank=c.slice(0,-1), s=CARD_SUITS.find(x=>x.key===suit);
+      return `<div class="${cls} suit-${suit}">${rank}<span>${s?.sym||suit}</span></div>`;
+    }).join('')}</div>`;
   }
   function openCardPicker(inputEl, max, fmt) {
     const current = parseCards(inputEl.value);
@@ -293,7 +302,12 @@
       host.append(btn('📚 Agregar estudio', 'btn-ghost', () => openStudyModal()));
     }
     if (view === 'manos') {
-      host.append(btn('＋ Anotar mano', 'btn-primary', () => openHandModal()));
+      const revBtn = btn(state.showReviewed ? '🟢 Ocultar revisadas' : '⬜ Ver revisadas', 'btn-ghost', () => {
+        state.showReviewed = !state.showReviewed;
+        renderTopbar('manos');
+        renderManos();
+      });
+      host.append(revBtn, btn('＋ Anotar mano', 'btn-primary', () => openHandModal()));
     }
   }
 
@@ -881,41 +895,65 @@
     if (hfq && !hfq._b) { hfq._b = true; hfq.oninput = renderManos; }
 
     const rows = state.hands.filter(h => {
+      if (!state.showReviewed && h.reviewed) return false;
       if (!q) return true;
       return [h.hero_cards, h.hero_position, h.stakes, h.notes, h.preflop, h.result_notes,
-        ...(h.players||[]).map(p => p.cards + ' ' + p.type)].join(' ').toLowerCase().includes(q);
+        ...(h.players||[]).map(p => (p.cards||'') + ' ' + (p.type||''))].join(' ').toLowerCase().includes(q);
     });
 
     $('#hands-empty').classList.toggle('hidden', rows.length > 0);
     $('#hands-list').innerHTML = rows.map(h => {
-      const board = [h.flop_board, h.turn_card, h.river_card].filter(Boolean).join(' · ');
-      const players = (h.players||[]).map(p =>
-        `<span class="hand-player-tag">${esc(p.pos)}: <b>${esc(p.type||'?')}</b>${p.cards ? ` → ${esc(p.showed !== false ? p.cards : 'no mostró')}` : ''}</span>`
-      ).join('');
-      return `<div class="hand-card">
+      const streetRow = (lbl, cards, action) => {
+        if (!cards && !action) return '';
+        return `<div class="hs-row">
+          <span class="hs-lbl">${lbl}</span>
+          ${cards ? renderCards(cards) : ''}
+          ${action ? `<span class="hs-act">${esc(action.slice(0,80))}${action.length>80?'…':''}</span>` : ''}
+        </div>`;
+      };
+      const players = (h.players||[]).map(p => {
+        const cardHtml = p.cards ? (p.showed !== false ? renderCards(p.cards, true) : '<span style="color:var(--faint);font-size:11px">no mostró</span>') : '';
+        return `<span class="hand-player-tag">${esc(p.pos)}: <b>${esc(p.type||'?')}</b>${cardHtml ? ' → ' : ''}${cardHtml}</span>`;
+      }).join('');
+
+      return `<div class="hand-card${h.reviewed?' reviewed':''}">
         <div class="hand-card-head">
           <div class="hand-card-meta">
             <span class="mono" style="font-size:12px;color:var(--muted)">${esc(h.played_on)}</span>
             ${h.stakes ? `<span class="pill online">${esc(h.stakes)}</span>` : ''}
             ${h.hero_position ? `<span style="font-size:12px;color:var(--muted)">Hero: <b style="color:var(--text)">${esc(h.hero_position)}</b></span>` : ''}
           </div>
-          <div style="display:flex;gap:6px">
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="btn btn-sm ${h.reviewed?'btn-reviewed':'btn-ghost'} btn-rev-toggle" data-hrev="${esc(h.id)}">${h.reviewed?'✅ Revisada':'Revisar'}</button>
             <button class="icon-btn" data-hedit="${esc(h.id)}">✎</button>
             <button class="icon-btn danger" data-hdel="${esc(h.id)}">🗑</button>
           </div>
         </div>
-        <div class="hand-cards-row">
-          ${h.hero_cards ? `<span class="hand-cards-hero">${esc(h.hero_cards)}</span>` : ''}
-          ${board ? `<span class="hand-board-display">${esc(board)}</span>` : ''}
-        </div>
-        ${players ? `<div class="hand-players-row">${players}</div>` : ''}
-        ${h.preflop ? `<div class="hand-street-preview"><span class="hand-street-lbl">Pre</span>${esc(h.preflop.slice(0,100))}${h.preflop.length>100?'…':''}</div>` : ''}
-        ${h.notes ? `<div class="hand-notes-preview">📝 ${esc(h.notes.slice(0,120))}${h.notes.length>120?'…':''}</div>` : ''}
+        ${h.hero_cards ? streetRow('HERO', h.hero_cards, '') : ''}
+        ${h.preflop ? `<div class="hs-row"><span class="hs-lbl">PRE</span><span class="hs-act">${esc(h.preflop.slice(0,90))}${h.preflop.length>90?'…':''}</span></div>` : ''}
+        ${streetRow('FLOP', h.flop_board, h.flop_action)}
+        ${streetRow('TURN', h.turn_card, h.turn_action)}
+        ${streetRow('RIVER', h.river_card, h.river_action)}
+        ${h.result_notes ? `<div class="hs-row"><span class="hs-lbl">RES</span><span class="hs-act">${esc(h.result_notes.slice(0,90))}${h.result_notes.length>90?'…':''}</span></div>` : ''}
+        ${players ? `<div class="hand-players-row" style="margin-top:8px">${players}</div>` : ''}
+        ${h.notes ? `<div class="hand-notes-preview">📝 ${esc(h.notes.slice(0,100))}${h.notes.length>100?'…':''}</div>` : ''}
       </div>`;
     }).join('');
 
     $$('[data-hedit]').forEach(b => b.onclick = () => openHandModal(b.dataset.hedit));
     $$('[data-hdel]').forEach(b => b.onclick = () => removeHand(b.dataset.hdel));
+    $$('[data-hrev]').forEach(b => b.onclick = () => toggleHandReviewed(b.dataset.hrev));
+  }
+
+  async function toggleHandReviewed(id) {
+    const h = state.hands.find(x => x.id === id);
+    if (!h) return;
+    try {
+      const upd = await Db.updateHand(id, { reviewed: !h.reviewed });
+      const i = state.hands.findIndex(x => x.id === id);
+      state.hands[i] = { ...state.hands[i], ...upd, reviewed: !h.reviewed };
+      renderManos();
+    } catch(err) { alert('Error: ' + err.message); }
   }
 
   async function removeHand(id) {

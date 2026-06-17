@@ -330,13 +330,24 @@ tbody tr:last-child td{border-bottom:none}
   background:var(--surface-2);border:1px solid var(--border);color:var(--muted);
 }
 .hand-player-tag b{ color:var(--text) }
-.hand-street-preview{ font-size:12.5px;color:var(--muted);margin-bottom:4px }
-.hand-street-lbl{
-  display:inline-block;font-size:10px;font-weight:800;
-  background:rgba(0,255,136,.12);color:var(--accent);
-  border-radius:6px;padding:1px 7px;margin-right:8px;letter-spacing:.06em;text-transform:uppercase;
+.hand-notes-preview{ font-size:12px;color:var(--faint);font-style:italic;margin-top:8px }
+/* Street rows */
+.hs-row{ display:flex;align-items:center;gap:8px;padding:4px 0;flex-wrap:wrap }
+.hs-lbl{
+  flex-shrink:0;font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  background:rgba(0,255,136,.12);color:var(--accent);border-radius:5px;padding:2px 7px;
 }
-.hand-notes-preview{ font-size:12px;color:var(--faint);font-style:italic;margin-top:4px }
+.hs-act{ font-size:12.5px;color:var(--muted);line-height:1.4 }
+/* Cards inline */
+.cards-inline{ display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap }
+.crd-mini{ width:22px!important;height:30px!important;font-size:10px!important;border-radius:4px!important }
+.crd-mini span{ font-size:8px!important }
+/* Reviewed state */
+.hand-card.reviewed{ opacity:.55;border-color:rgba(0,255,136,.2) }
+.btn-reviewed{
+  background:rgba(0,255,136,.15)!important;border:1px solid rgba(0,255,136,.4)!important;
+  color:var(--accent)!important;
+}
 
 /* ---------- Loader ---------- */
 .loader{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);z-index:100}

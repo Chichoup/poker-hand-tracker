@@ -12,6 +12,63 @@
   const state = { user: null, cfg: null, sessions: [], hands: [], monthSel: C.monthKey(), entered: false };
 
   const MOOD_COLORS = { 1: '#ff5d5d', 2: '#ff8c42', 3: '#f5c518', 4: '#9be15d', 5: '#00ff88' };
+  const CARD_RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+  const CARD_SUITS = [
+    { key:'c', sym:'♣', color:'#2ecc71' },
+    { key:'d', sym:'♦', color:'#5b8def' },
+    { key:'h', sym:'♥', color:'#e74c3c' },
+    { key:'s', sym:'♠', color:'#b0b0b8' },
+  ];
+  function parseCards(str) {
+    return ((str||'').match(/[AKQJTakqjt2-9][cdhs]/gi)||[]).map(c=>c[0].toUpperCase()+c[1].toLowerCase());
+  }
+  function openCardPicker(inputEl, max, fmt) {
+    const current = parseCards(inputEl.value);
+    let selected = [...current];
+    const overlay = document.createElement('div');
+    overlay.className = 'card-picker-overlay';
+    function getExcluded() {
+      return [...document.querySelectorAll('.card-input')]
+        .filter(el => el !== inputEl).flatMap(el => parseCards(el.value));
+    }
+    function render() {
+      const excluded = getExcluded();
+      overlay.innerHTML = `<div class="card-picker-modal">
+        <div class="card-picker-head">
+          <div class="card-picker-sel">
+            ${selected.length ? selected.map(c=>{const s=CARD_SUITS.find(x=>x.key===c.slice(-1));return `<div class="crd suit-${c.slice(-1)}">${c.slice(0,-1)}<span>${s?.sym||''}</span></div>`;}).join('')
+              : '<span style="color:var(--muted);font-size:13px">Ninguna</span>'}
+            <span style="color:var(--faint);font-size:12px;margin-left:6px">${selected.length}/${max}</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" id="cp-clear">Limpiar</button>
+            <button class="btn btn-primary btn-sm" id="cp-ok">Confirmar</button>
+          </div>
+        </div>
+        <div class="card-picker-grid">
+          ${CARD_SUITS.map(suit=>`<div class="cp-suit-row">${CARD_RANKS.map(rank=>{
+            const card=rank+suit.key, isSel=selected.includes(card), isExcl=excluded.includes(card);
+            return `<button type="button" class="cp-btn${isSel?' sel':''}${isExcl?' excl':''}" data-card="${card}" style="--sc:${suit.color}"${isExcl?' disabled':''}>${rank}<span>${suit.sym}</span></button>`;
+          }).join('')}</div>`).join('')}
+        </div>
+      </div>`;
+      overlay.querySelectorAll('.cp-btn:not(.excl)').forEach(btn=>{
+        btn.onclick=()=>{
+          const c=btn.dataset.card;
+          selected=selected.includes(c)?selected.filter(x=>x!==c):(selected.length<max?[...selected,c]:selected);
+          render();
+        };
+      });
+      overlay.querySelector('#cp-clear').onclick=()=>{selected=[];render();};
+      overlay.querySelector('#cp-ok').onclick=()=>{
+        inputEl.value=fmt==='space'?selected.join(' '):selected.join('');
+        overlay.remove();
+      };
+      overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
+    }
+    render();
+    document.body.appendChild(overlay);
+  }
   const chartInstances = {};
 
   // ---- formato ----
@@ -877,7 +934,10 @@
     return `<div class="hand-player-row" data-pi="${i}">
       <select class="hp-pos">${posOpts(p.pos)}</select>
       <select class="hp-type">${typeOpts(p.type)}</select>
-      <input class="hp-cards" value="${esc(p.cards||'')}" placeholder="Cartas (ej: AA)" list="stakes-suggestions" autocomplete="off" style="width:100px">
+      <div style="display:flex;gap:4px;align-items:center">
+        <input class="hp-cards card-input" value="${esc(p.cards||'')}" placeholder="AA" autocomplete="off" style="width:72px">
+        <button type="button" class="btn btn-ghost btn-sm hp-card-btn" title="Seleccionar cartas">🃏</button>
+      </div>
       <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);white-space:nowrap">
         <input type="checkbox" class="hp-showed"${p.showed!==false?' checked':''}> mostró
       </label>
@@ -915,7 +975,12 @@
           <div class="hand-section-title">🦸 Hero</div>
           <div class="form-grid">
             <div class="field"><label>Posición</label><select id="h-hero-pos">${posOpts(h.hero_position)}</select></div>
-            <div class="field"><label>Cartas</label><input id="h-hero-cards" value="${esc(h.hero_cards)}" placeholder="JcTc, AhKs…"></div>
+            <div class="field"><label>Cartas</label>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input id="h-hero-cards" class="card-input" value="${esc(h.hero_cards)}" placeholder="JcTc" autocomplete="off">
+              <button type="button" class="btn btn-ghost btn-sm" id="h-hero-cards-btn">🃏</button>
+            </div>
+          </div>
           </div>
         </div>
         <div class="hand-section">
@@ -931,17 +996,32 @@
         </div>
         <div class="hand-section">
           <div class="hand-section-title">🃏 Flop</div>
-          <div class="field"><label>Cartas del flop</label><input id="h-flop-board" value="${esc(h.flop_board)}" placeholder="As 8c 9h"></div>
+          <div class="field"><label>Cartas del flop</label>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input id="h-flop-board" class="card-input" value="${esc(h.flop_board)}" placeholder="As 8c 9h" autocomplete="off">
+              <button type="button" class="btn btn-ghost btn-sm" id="h-flop-btn">🃏</button>
+            </div>
+          </div>
           <div class="field" style="margin-top:10px"><textarea id="h-flop-action" rows="2" placeholder="Check, MP apuesta $150, BTN paga, yo all-in $500, todos pagan.">${esc(h.flop_action)}</textarea></div>
         </div>
         <div class="hand-section">
           <div class="hand-section-title">🃏 Turn</div>
-          <div class="field"><label>Carta</label><input id="h-turn-card" value="${esc(h.turn_card)}" placeholder="7h" style="max-width:120px"></div>
+          <div class="field"><label>Carta</label>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input id="h-turn-card" class="card-input" value="${esc(h.turn_card)}" placeholder="7h" autocomplete="off" style="max-width:100px">
+              <button type="button" class="btn btn-ghost btn-sm" id="h-turn-btn">🃏</button>
+            </div>
+          </div>
           <div class="field" style="margin-top:10px"><textarea id="h-turn-action" rows="2" placeholder="Acción en el turn…">${esc(h.turn_action)}</textarea></div>
         </div>
         <div class="hand-section">
           <div class="hand-section-title">🃏 River</div>
-          <div class="field"><label>Carta</label><input id="h-river-card" value="${esc(h.river_card)}" placeholder="4h" style="max-width:120px"></div>
+          <div class="field"><label>Carta</label>
+            <div style="display:flex;gap:6px;align-items:center">
+              <input id="h-river-card" class="card-input" value="${esc(h.river_card)}" placeholder="4h" autocomplete="off" style="max-width:100px">
+              <button type="button" class="btn btn-ghost btn-sm" id="h-river-btn">🃏</button>
+            </div>
+          </div>
           <div class="field" style="margin-top:10px"><textarea id="h-river-action" rows="2" placeholder="Acción en el river…">${esc(h.river_action)}</textarea></div>
         </div>
         <div class="hand-section">
@@ -958,6 +1038,12 @@
         </div>
       </form>
     </div></div>`;
+
+    // Card pickers fijos
+    $('#h-hero-cards-btn').onclick = () => openCardPicker($('#h-hero-cards'), 2, 'concat');
+    $('#h-flop-btn').onclick       = () => openCardPicker($('#h-flop-board'), 3, 'space');
+    $('#h-turn-btn').onclick       = () => openCardPicker($('#h-turn-card'),  1, 'concat');
+    $('#h-river-btn').onclick      = () => openCardPicker($('#h-river-card'), 1, 'concat');
 
     // Agregar rival
     $('#h-add-player').onclick = () => {
@@ -1020,6 +1106,9 @@
 
   function bindRemoveButtons() {
     $$('.hp-remove').forEach(b => { b.onclick = () => b.closest('.hand-player-row').remove(); });
+    $$('.hp-card-btn').forEach(b => {
+      b.onclick = () => openCardPicker(b.closest('.hand-player-row').querySelector('.hp-cards'), 2, 'concat');
+    });
   }
 
   // ---- STUDY MODAL ----

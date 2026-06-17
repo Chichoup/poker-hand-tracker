@@ -1,4 +1,4 @@
-const CACHE = 'pht-v1';
+const CACHE = 'pht-v2';
 const ASSETS = [
   '/',
   '/index.html',

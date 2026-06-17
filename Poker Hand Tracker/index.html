@@ -71,6 +71,7 @@
     <nav class="nav" id="nav">
       <a data-view="inicio" class="active"><span class="ico">🏠</span> Inicio</a>
       <a data-view="registro"><span class="ico">📝</span> Registro</a>
+      <a data-view="manos"><span class="ico">🃏</span> Manos</a>
       <a data-view="dashboard"><span class="ico">📊</span> Dashboard</a>
       <a data-view="mensual"><span class="ico">📅</span> Análisis mensual</a>
       <a data-view="objetivos"><span class="ico">🎯</span> Objetivos</a>
@@ -117,7 +118,7 @@
       <div class="panel">
         <div class="table-tools">
           <input class="search" id="flt-q" placeholder="🔎 Buscar (sitio, notas, stake)…">
-          <select id="flt-mode"><option value="">Modalidad</option><option>Live</option><option>Online</option></select>
+          <select id="flt-mode"><option value="">Modalidad</option><option>Live</option><option>Online</option><option>Estudio</option></select>
           <select id="flt-stake"><option value="">Stake</option></select>
           <input type="month" id="flt-month" title="Filtrar por mes">
           <button class="btn btn-ghost btn-sm" id="clear-filters">Limpiar</button>
@@ -132,6 +133,18 @@
           </table>
         </div>
         <div class="empty hidden" id="reg-empty"><div class="big">🃏</div>No hay sesiones que coincidan.</div>
+      </div>
+    </section>
+
+    <!-- MANOS -->
+    <section class="view" id="view-manos">
+      <div class="panel" style="margin-top:0">
+        <div class="table-tools">
+          <input class="search" id="hand-flt-q" placeholder="🔎 Buscar (posición, cartas, notas)…">
+          <button class="btn btn-ghost btn-sm" id="hand-clear">Limpiar</button>
+        </div>
+        <div id="hands-list"></div>
+        <div class="empty hidden" id="hands-empty"><div class="big">🃏</div>No hay manos registradas todavía.</div>
       </div>
     </section>
 
@@ -200,15 +213,12 @@
               <select id="cfg-currency"><option>USD</option><option>EUR</option><option>ARS</option><option>GBP</option><option>BRL</option></select>
             </div>
             <div class="field"><label>Bankroll inicial</label><input type="number" step="0.01" id="cfg-bankroll"></div>
-            <div class="field"><label>Stake habitual</label><select id="cfg-stake"></select></div>
+            <div class="field"><label>Stake habitual</label><input id="cfg-stake" list="stakes-suggestions" placeholder="ej: NL50, 1-2, 3-3…" autocomplete="off"></div>
             <div class="field"><label>Objetivo horas / mes</label><input type="number" id="cfg-goal-hours"></div>
             <div class="field"><label>Objetivo sesiones / mes</label><input type="number" id="cfg-goal-sessions"></div>
             <div class="field"><label>Objetivo estudio (h/mes)</label><input type="number" id="cfg-goal-study"></div>
             <div class="field"><label>Objetivo manos analizadas</label><input type="number" id="cfg-goal-hands"></div>
           </div>
-          <h2 style="margin-top:22px">🎚️ BB sizes por stake</h2>
-          <p class="desc">Para calcular BB/100 (25 manos/h live · 75 manos/h online).</p>
-          <div class="bb-grid" id="cfg-bb"></div>
           <div class="modal-foot" style="justify-content:flex-start">
             <button type="submit" class="btn btn-primary">Guardar configuración</button>
           </div>

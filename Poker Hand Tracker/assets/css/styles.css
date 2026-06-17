@@ -27,8 +27,8 @@ html,body{height:100%}
 body{
   font-family:'Inter',system-ui,sans-serif;
   background:
-    radial-gradient(900px 600px at 12% -8%, rgba(0,255,136,.10), transparent 60%),
-    radial-gradient(800px 600px at 100% 0%, rgba(245,197,24,.07), transparent 55%),
+    radial-gradient(700px 400px at 12% -12%, rgba(0,255,136,.05), transparent 60%),
+    radial-gradient(600px 400px at 100% 0%, rgba(245,197,24,.04), transparent 55%),
     var(--bg);
   color:var(--text);
   font-size:14px;line-height:1.5;letter-spacing:-.01em;
@@ -193,6 +193,7 @@ tbody tr:last-child td{border-bottom:none}
 .pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
 .pill.live{background:rgba(245,197,24,.14);color:var(--gold)}
 .pill.online{background:rgba(0,255,136,.14);color:var(--accent)}
+.pill.study{background:rgba(100,149,237,.18);color:#7eb8ff}
 .mood-dot{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:8px;font-weight:800;font-size:12px;color:#04140b}
 .icon-btn{width:30px;height:30px;border-radius:9px;display:inline-grid;place-items:center;color:var(--muted);transition:.15s;font-size:14px}
 .icon-btn:hover{background:var(--surface-2);color:var(--text)}
@@ -248,6 +249,52 @@ tbody tr:last-child td{border-bottom:none}
 .cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .bb-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px}
 
+/* ---------- Modal ancho ---------- */
+.modal.modal-lg{ max-width:760px }
+
+/* ---------- Hand sections (modal) ---------- */
+.hand-section{ border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:14px }
+.hand-section-title{ font-size:13px;font-weight:800;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px }
+.hand-player-row{
+  display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+  padding:10px 0;border-bottom:1px solid var(--border);
+}
+.hand-player-row:last-child{ border-bottom:none }
+.hand-player-row select,.hand-player-row input{
+  padding:7px 10px;background:var(--bg-2);border:1px solid var(--border);
+  border-radius:10px;color:var(--text);font-size:13px;
+}
+
+/* ---------- Hand cards (list view) ---------- */
+.hand-card{
+  background:linear-gradient(170deg,rgba(255,255,255,.045),rgba(255,255,255,.01));
+  border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-bottom:12px;
+  transition:.18s;
+}
+.hand-card:hover{ border-color:var(--border-strong) }
+.hand-card-head{ display:flex;justify-content:space-between;align-items:center;margin-bottom:10px }
+.hand-card-meta{ display:flex;align-items:center;gap:10px;flex-wrap:wrap }
+.hand-cards-row{ display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap }
+.hand-cards-hero{
+  font-size:18px;font-weight:800;letter-spacing:.04em;
+  background:linear-gradient(135deg,var(--accent),var(--accent-dim));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.hand-board-display{ font-size:14px;color:var(--muted);font-weight:600;letter-spacing:.06em }
+.hand-players-row{ display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px }
+.hand-player-tag{
+  font-size:11.5px;padding:3px 9px;border-radius:8px;
+  background:var(--surface-2);border:1px solid var(--border);color:var(--muted);
+}
+.hand-player-tag b{ color:var(--text) }
+.hand-street-preview{ font-size:12.5px;color:var(--muted);margin-bottom:4px }
+.hand-street-lbl{
+  display:inline-block;font-size:10px;font-weight:800;
+  background:rgba(0,255,136,.12);color:var(--accent);
+  border-radius:6px;padding:1px 7px;margin-right:8px;letter-spacing:.06em;text-transform:uppercase;
+}
+.hand-notes-preview{ font-size:12px;color:var(--faint);font-style:italic;margin-top:4px }
+
 /* ---------- Loader ---------- */
 .loader{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);z-index:100}
 .spinner{width:38px;height:38px;border-radius:50%;border:3px solid var(--surface-2);border-top-color:var(--accent);animation:spin .8s linear infinite}
@@ -261,6 +308,7 @@ tbody tr:last-child td{border-bottom:none}
   .sidebar{
     position:fixed;z-index:60;width:264px;left:0;top:0;transform:translateX(-110%);
     transition:transform .25s ease;box-shadow:var(--shadow);
+    background:var(--bg-2);
   }
   .sidebar.open{transform:none}
   .scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:55;opacity:0;pointer-events:none;transition:opacity .25s}
@@ -271,4 +319,30 @@ tbody tr:last-child td{border-bottom:none}
   .grid-2{grid-template-columns:1fr}
   .form-grid,.cfg-grid{grid-template-columns:1fr}
   .page-title h1{font-size:19px}
+
+  /* Tabla → tarjetas en mobile */
+  .table-wrap{ border:none;background:none }
+  .table-wrap table,.table-wrap thead,.table-wrap tbody,
+  .table-wrap th,.table-wrap td,.table-wrap tr{ display:block }
+  .table-wrap thead tr{ display:none }
+  .table-wrap tbody tr{
+    border:1px solid var(--border);border-radius:14px;
+    padding:14px 16px;margin-bottom:10px;
+    background:linear-gradient(170deg,rgba(255,255,255,.045),rgba(255,255,255,.01));
+  }
+  .table-wrap tbody tr:hover{ background:rgba(0,255,136,.05) }
+  .table-wrap td{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:5px 0;border:none;font-size:13px;
+  }
+  .table-wrap td:before{
+    content:attr(data-label);
+    font-weight:700;color:var(--muted);font-size:10.5px;
+    text-transform:uppercase;letter-spacing:.07em;flex-shrink:0;margin-right:12px;
+  }
+  .table-wrap td[data-label=""]:before{ display:none }
+  .table-wrap td[data-label=""]{ justify-content:flex-end;padding-top:10px;border-top:1px solid var(--border);margin-top:6px }
+
+  .table-tools{ flex-direction:column }
+  .table-tools select,.table-tools input,.table-tools button{ width:100% }
 }

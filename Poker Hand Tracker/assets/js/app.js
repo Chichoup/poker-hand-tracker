@@ -9,7 +9,7 @@
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
   // ---- estado global ----
-  const state = { user: null, cfg: null, sessions: [], monthSel: C.monthKey(), entered: false };
+  const state = { user: null, cfg: null, sessions: [], hands: [], monthSel: C.monthKey(), entered: false };
 
   const MOOD_COLORS = { 1: '#ff5d5d', 2: '#ff8c42', 3: '#f5c518', 4: '#9be15d', 5: '#00ff88' };
   const chartInstances = {};
@@ -155,6 +155,7 @@
     try {
       state.cfg = await Db.loadConfig(state.user.id);
       state.sessions = await Db.loadSessions(state.user.id);
+      state.hands = await Db.loadHands(state.user.id);
     } catch (err) {
       alert('Error cargando datos: ' + err.message);
       state.entered = false;
@@ -184,6 +185,7 @@
   const PAGES = {
     inicio:    ['Inicio',           'Resumen rápido y objetivos del mes'],
     registro:  ['Registro',         'Todas tus sesiones'],
+    manos:     ['Manos',            'Anotador de manos para estudio'],
     dashboard: ['Dashboard',        'Métricas globales de tu juego'],
     mensual:   ['Análisis mensual', 'Métricas filtradas por mes'],
     objetivos: ['Objetivos',        'Progreso de proceso del mes'],
@@ -230,6 +232,12 @@
         btn('＋ Nueva sesión', 'btn-primary', () => openSessionModal())
       );
     }
+    if (view === 'objetivos') {
+      host.append(btn('📚 Agregar estudio', 'btn-ghost', () => openStudyModal()));
+    }
+    if (view === 'manos') {
+      host.append(btn('＋ Anotar mano', 'btn-primary', () => openHandModal()));
+    }
   }
 
   function btn(label, klass, onClick) {
@@ -241,9 +249,13 @@
   }
 
   function fillStaticSelects() {
-    const opts = C.STAKES.map((s) => `<option>${s}</option>`).join('');
-    $('#flt-stake').innerHTML = '<option value="">Stake</option>' + opts;
-    $('#cfg-stake').innerHTML = opts;
+    const used = [...new Set(state.sessions.map((s) => s.stakes).filter(Boolean))];
+    const defaults = ['NL10','NL25','NL50','NL100','NL200','NL500','1-2','1-3','2-5','5-10','10-20'];
+    const suggestions = [...new Set([...used, ...defaults])];
+    let dl = document.getElementById('stakes-suggestions');
+    if (!dl) { dl = document.createElement('datalist'); dl.id = 'stakes-suggestions'; document.body.appendChild(dl); }
+    dl.innerHTML = suggestions.map((s) => `<option value="${esc(s)}">`).join('');
+    $('#flt-stake').innerHTML = '<option value="">Stake</option>' + used.map((s) => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
   }
 
   // ============================================================
@@ -252,6 +264,7 @@
   function renderAll() {
     renderInicio();
     renderRegistro();
+    renderManos();
     renderDashboardKpis();
     renderMensual();
     renderObjetivos();
@@ -312,17 +325,17 @@
       const r = C.result(s);
       const mc = MOOD_COLORS[s.mood] || '#5b5f6a';
       return `<tr>
-        <td class="mono">${esc(s.played_on)}</td>
-        <td><span class="pill ${s.mode === 'Live' ? 'live' : 'online'}">${esc(s.mode)}</span></td>
-        <td>${esc(s.site) || '—'}</td>
-        <td>${esc(s.stakes) || '—'}</td>
-        <td class="mono">${C.num(s.hours)}</td>
-        <td class="mono">${money(s.buyin)}</td>
-        <td class="mono">${money(s.cashout)}</td>
-        <td class="mono ${cls(r)}"><b>${money(r, true)}</b></td>
-        <td class="mono">${money(s.bankroll)}</td>
-        <td>${s.mood ? `<span class="mood-dot" style="background:${mc}">${s.mood}</span>` : '—'}</td>
-        <td style="text-align:right;white-space:nowrap">
+        <td data-label="Fecha" class="mono">${esc(s.played_on)}</td>
+        <td data-label="Modalidad"><span class="pill ${s.mode === 'Live' ? 'live' : s.mode === 'Estudio' ? 'study' : 'online'}">${esc(s.mode)}</span></td>
+        <td data-label="Sitio">${esc(s.site) || '—'}</td>
+        <td data-label="Stakes">${esc(s.stakes) || '—'}</td>
+        <td data-label="Horas" class="mono">${C.num(s.hours)}</td>
+        <td data-label="Buy-in" class="mono">${money(s.buyin)}</td>
+        <td data-label="Cash-out" class="mono">${money(s.cashout)}</td>
+        <td data-label="Resultado" class="mono ${cls(r)}"><b>${money(r, true)}</b></td>
+        <td data-label="Bankroll" class="mono">${money(s.bankroll)}</td>
+        <td data-label="Mood">${s.mood ? `<span class="mood-dot" style="background:${mc}">${s.mood}</span>` : '—'}</td>
+        <td data-label="" style="text-align:right;white-space:nowrap">
           <button class="icon-btn" data-edit="${s.id}">✎</button>
           <button class="icon-btn danger" data-del="${s.id}">🗑</button>
         </td>
@@ -335,7 +348,6 @@
   // ---- DASHBOARD KPIs ----
   function renderDashboardKpis() {
     const d = C.dashboard(state.sessions, state.cfg.initial_bankroll);
-    const bb = C.bb100(state.sessions, state.cfg.bb_sizes);
     $('#dash-kpis').innerHTML = [
       kpi('💰 P&L neto total',    money(d.pl, true),              cls(d.pl), '', true),
       kpi('🏦 Bankroll actual',   money(d.currentBankroll),       cls(d.currentBankroll - C.num(state.cfg.initial_bankroll))),
@@ -350,7 +362,6 @@
       kpi('🎰 Stake más jugado',  d.mostStake),
       kpi('🟡 P&L Live',         money(d.plLive, true),          cls(d.plLive), money(d.perHourLive, true) + ' /h'),
       kpi('🟢 P&L Online',       money(d.plOnline, true),        cls(d.plOnline), money(d.perHourOnline, true) + ' /h'),
-      kpi('📐 BB/100',            bb.toFixed(2),                  cls(bb), 'según BB sizes'),
     ].join('');
   }
 
@@ -379,7 +390,7 @@
         labels: labels.length ? labels : ['Inicio'],
         datasets: [{
           label: 'Bankroll', data: data.length ? data : [C.num(state.cfg.initial_bankroll)],
-          borderColor: col, borderWidth: 2.5, tension: 0.38, fill: true,
+          borderColor: col, borderWidth: 2.5, tension: 0, fill: true,
           pointRadius: data.length > 40 ? 0 : 3, pointBackgroundColor: col,
           backgroundColor: (ctx) => {
             const { ctx: c, chartArea } = ctx.chart;
@@ -646,17 +657,11 @@
     $('#cfg-goal-sessions').value = C.num(c.goal_sessions);
     $('#cfg-goal-study').value  = C.num(c.goal_study);
     $('#cfg-goal-hands').value  = C.num(c.goal_hands);
-    const bb = c.bb_sizes || {};
-    $('#cfg-bb').innerHTML = C.STAKES.map((s) =>
-      `<div class="field"><label>${s}</label><input type="number" step="0.01" data-bb="${s}" value="${C.num(bb[s])}"></div>`
-    ).join('');
     const form = $('#cfg-form');
     if (!form._bound) {
       form._bound = true;
       form.onsubmit = async (e) => {
         e.preventDefault();
-        const bbSizes = {};
-        $$('[data-bb]').forEach((i) => (bbSizes[i.dataset.bb] = C.num(i.value)));
         const patch = {
           name:             $('#cfg-name').value.trim() || 'Jugador',
           currency:         $('#cfg-currency').value,
@@ -666,7 +671,6 @@
           goal_sessions:    C.num($('#cfg-goal-sessions').value),
           goal_study:       C.num($('#cfg-goal-study').value),
           goal_hands:       C.num($('#cfg-goal-hands').value),
-          bb_sizes:         bbSizes,
         };
         try {
           state.cfg = await Db.saveConfig(state.user.id, patch);
@@ -691,7 +695,7 @@
       hours: '', buyin: '', cashout: '', mood: 3,
       study_hours: '', hands_analyzed: '', notes: '',
     };
-    const stakeOpts = C.STAKES.map((x) => `<option ${x === s.stakes ? 'selected' : ''}>${x}</option>`).join('');
+    const stakeOpts = '';
     const moodBtns  = [1,2,3,4,5].map((m) =>
       `<button type="button" data-mood="${m}" class="${m === C.num(s.mood) ? 'sel' : ''}"
         style="${m === C.num(s.mood) ? `background:${MOOD_COLORS[m]}` : ''}">${m}</button>`
@@ -710,7 +714,7 @@
             <select id="m-mode"><option ${s.mode==='Live'?'selected':''}>Live</option><option ${s.mode==='Online'?'selected':''}>Online</option></select>
           </div>
           <div class="field"><label>Sitio / Casino</label><input id="m-site" value="${esc(s.site)}" placeholder="Casino Buenos Aires"></div>
-          <div class="field"><label>Stakes</label><select id="m-stakes">${stakeOpts}</select></div>
+          <div class="field"><label>Stakes</label><input id="m-stakes" list="stakes-suggestions" value="${esc(s.stakes)}" placeholder="NL50, 1-2, 3-3…" autocomplete="off"></div>
           <div class="field"><label>Horas</label><input type="number" step="0.25" min="0" id="m-hours" value="${s.hours}" placeholder="0"></div>
           <div class="field"><label>Buy-in</label><input type="number" step="0.01" id="m-buyin" value="${s.buyin}" placeholder="0.00"></div>
           <div class="field"><label>Cash-out</label><input type="number" step="0.01" id="m-cashout" value="${s.cashout}" placeholder="0.00"></div>
@@ -806,6 +810,266 @@
     } catch (err) {
       alert('Error al eliminar: ' + err.message);
     }
+  }
+
+  // ---- MANOS ----
+  const POSITIONS = ['UTG','UTG+1','UTG+2','MP','MP+1','HJ','CO','BTN','SB','BB'];
+  const PLAYER_TYPES = ['Desconocido','Fish agresivo','Fish pasivo','Regular agresivo','Regular pasivo','Nit','Maniac','LAG','TAG'];
+
+  function renderManos() {
+    const q = ($('#hand-flt-q')?.value || '').toLowerCase();
+    const cl = $('#hand-clear');
+    if (cl && !cl._b) { cl._b = true; cl.onclick = () => { $('#hand-flt-q').value = ''; renderManos(); }; }
+    const hfq = $('#hand-flt-q');
+    if (hfq && !hfq._b) { hfq._b = true; hfq.oninput = renderManos; }
+
+    const rows = state.hands.filter(h => {
+      if (!q) return true;
+      return [h.hero_cards, h.hero_position, h.stakes, h.notes, h.preflop, h.result_notes,
+        ...(h.players||[]).map(p => p.cards + ' ' + p.type)].join(' ').toLowerCase().includes(q);
+    });
+
+    $('#hands-empty').classList.toggle('hidden', rows.length > 0);
+    $('#hands-list').innerHTML = rows.map(h => {
+      const board = [h.flop_board, h.turn_card, h.river_card].filter(Boolean).join(' · ');
+      const players = (h.players||[]).map(p =>
+        `<span class="hand-player-tag">${esc(p.pos)}: <b>${esc(p.type||'?')}</b>${p.cards ? ` → ${esc(p.showed !== false ? p.cards : 'no mostró')}` : ''}</span>`
+      ).join('');
+      return `<div class="hand-card">
+        <div class="hand-card-head">
+          <div class="hand-card-meta">
+            <span class="mono" style="font-size:12px;color:var(--muted)">${esc(h.played_on)}</span>
+            ${h.stakes ? `<span class="pill online">${esc(h.stakes)}</span>` : ''}
+            ${h.hero_position ? `<span style="font-size:12px;color:var(--muted)">Hero: <b style="color:var(--text)">${esc(h.hero_position)}</b></span>` : ''}
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="icon-btn" data-hedit="${esc(h.id)}">✎</button>
+            <button class="icon-btn danger" data-hdel="${esc(h.id)}">🗑</button>
+          </div>
+        </div>
+        <div class="hand-cards-row">
+          ${h.hero_cards ? `<span class="hand-cards-hero">${esc(h.hero_cards)}</span>` : ''}
+          ${board ? `<span class="hand-board-display">${esc(board)}</span>` : ''}
+        </div>
+        ${players ? `<div class="hand-players-row">${players}</div>` : ''}
+        ${h.preflop ? `<div class="hand-street-preview"><span class="hand-street-lbl">Pre</span>${esc(h.preflop.slice(0,100))}${h.preflop.length>100?'…':''}</div>` : ''}
+        ${h.notes ? `<div class="hand-notes-preview">📝 ${esc(h.notes.slice(0,120))}${h.notes.length>120?'…':''}</div>` : ''}
+      </div>`;
+    }).join('');
+
+    $$('[data-hedit]').forEach(b => b.onclick = () => openHandModal(b.dataset.hedit));
+    $$('[data-hdel]').forEach(b => b.onclick = () => removeHand(b.dataset.hdel));
+  }
+
+  async function removeHand(id) {
+    if (!confirm('¿Eliminar esta mano?')) return;
+    try {
+      await Db.deleteHand(id);
+      state.hands = state.hands.filter(x => x.id !== id);
+      renderManos();
+    } catch(err) { alert('Error: ' + err.message); }
+  }
+
+  function posOpts(sel) { return POSITIONS.map(p => `<option${p===sel?' selected':''}>${p}</option>`).join(''); }
+  function typeOpts(sel) { return PLAYER_TYPES.map(t => `<option${t===sel?' selected':''}>${t}</option>`).join(''); }
+
+  function playerRowHtml(p, i) {
+    return `<div class="hand-player-row" data-pi="${i}">
+      <select class="hp-pos">${posOpts(p.pos)}</select>
+      <select class="hp-type">${typeOpts(p.type)}</select>
+      <input class="hp-cards" value="${esc(p.cards||'')}" placeholder="Cartas (ej: AA)" list="stakes-suggestions" autocomplete="off" style="width:100px">
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);white-space:nowrap">
+        <input type="checkbox" class="hp-showed"${p.showed!==false?' checked':''}> mostró
+      </label>
+      <button type="button" class="icon-btn danger hp-remove" title="Quitar">✕</button>
+    </div>`;
+  }
+
+  function openHandModal(id) {
+    const editing = state.hands.find(h => h.id === id);
+    const h = editing || {
+      played_on: new Date().toISOString().slice(0,10),
+      stakes: state.cfg.usual_stake || '',
+      hero_position: 'BTN', hero_cards: '',
+      players: [],
+      preflop:'', flop_board:'', flop_action:'',
+      turn_card:'', turn_action:'', river_card:'', river_action:'',
+      result_notes:'', notes:'',
+    };
+
+    const host = $('#modal-host');
+    host.innerHTML = `<div class="modal-back"><div class="modal modal-lg">
+      <h3>${editing ? '✎ Editar mano' : '🃏 Anotar mano'}
+        <button class="icon-btn" id="m-close">✕</button>
+      </h3>
+      <div id="m-banner"></div>
+      <form id="m-form">
+        <div class="hand-section">
+          <div class="hand-section-title">📋 Info básica</div>
+          <div class="form-grid">
+            <div class="field"><label>Fecha</label><input type="date" id="h-date" value="${h.played_on}" required></div>
+            <div class="field"><label>Stakes</label><input id="h-stakes" list="stakes-suggestions" value="${esc(h.stakes)}" placeholder="NL100, 1-2, 3-3…" autocomplete="off"></div>
+          </div>
+        </div>
+        <div class="hand-section">
+          <div class="hand-section-title">🦸 Hero</div>
+          <div class="form-grid">
+            <div class="field"><label>Posición</label><select id="h-hero-pos">${posOpts(h.hero_position)}</select></div>
+            <div class="field"><label>Cartas</label><input id="h-hero-cards" value="${esc(h.hero_cards)}" placeholder="JcTc, AhKs…"></div>
+          </div>
+        </div>
+        <div class="hand-section">
+          <div class="hand-section-title" style="display:flex;justify-content:space-between;align-items:center">
+            👥 Rivales
+            <button type="button" class="btn btn-ghost btn-sm" id="h-add-player">＋ Agregar rival</button>
+          </div>
+          <div id="h-players">${(h.players||[]).map(playerRowHtml).join('')}</div>
+        </div>
+        <div class="hand-section">
+          <div class="hand-section-title">🎴 Preflop</div>
+          <div class="field"><textarea id="h-preflop" rows="3" placeholder="Ej: Abro UTG $20 con JcTc, MP (fish agresivo) 3bet $80, BTN paga, yo pago.">${esc(h.preflop)}</textarea></div>
+        </div>
+        <div class="hand-section">
+          <div class="hand-section-title">🃏 Flop</div>
+          <div class="field"><label>Cartas del flop</label><input id="h-flop-board" value="${esc(h.flop_board)}" placeholder="As 8c 9h"></div>
+          <div class="field" style="margin-top:10px"><textarea id="h-flop-action" rows="2" placeholder="Check, MP apuesta $150, BTN paga, yo all-in $500, todos pagan.">${esc(h.flop_action)}</textarea></div>
+        </div>
+        <div class="hand-section">
+          <div class="hand-section-title">🃏 Turn</div>
+          <div class="field"><label>Carta</label><input id="h-turn-card" value="${esc(h.turn_card)}" placeholder="7h" style="max-width:120px"></div>
+          <div class="field" style="margin-top:10px"><textarea id="h-turn-action" rows="2" placeholder="Acción en el turn…">${esc(h.turn_action)}</textarea></div>
+        </div>
+        <div class="hand-section">
+          <div class="hand-section-title">🃏 River</div>
+          <div class="field"><label>Carta</label><input id="h-river-card" value="${esc(h.river_card)}" placeholder="4h" style="max-width:120px"></div>
+          <div class="field" style="margin-top:10px"><textarea id="h-river-action" rows="2" placeholder="Acción en el river…">${esc(h.river_action)}</textarea></div>
+        </div>
+        <div class="hand-section">
+          <div class="hand-section-title">🏆 Resultado / Showdown</div>
+          <div class="field"><textarea id="h-result" rows="2" placeholder="MP muestra AA, BTN no muestra, yo gano con escalera al nut.">${esc(h.result_notes)}</textarea></div>
+        </div>
+        <div class="hand-section">
+          <div class="hand-section-title">📝 Notas de estudio</div>
+          <div class="field"><textarea id="h-notes" rows="2" placeholder="¿Jugué bien? ¿Qué mejoraría? ¿Errores? ¿Puntos a revisar con solver?">${esc(h.notes)}</textarea></div>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn btn-ghost" id="m-cancel">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="m-save">${editing ? 'Guardar cambios' : 'Guardar mano'}</button>
+        </div>
+      </form>
+    </div></div>`;
+
+    // Agregar rival
+    $('#h-add-player').onclick = () => {
+      const cont = $('#h-players');
+      const i = cont.querySelectorAll('.hand-player-row').length;
+      const div = document.createElement('div');
+      div.innerHTML = playerRowHtml({ pos:'BB', type:'Desconocido', cards:'', showed:true }, i);
+      cont.appendChild(div.firstElementChild);
+      bindRemoveButtons();
+    };
+    bindRemoveButtons();
+
+    const close = () => (host.innerHTML = '');
+    $('#m-close').onclick = close;
+    $('#m-cancel').onclick = close;
+    $('.modal-back').onclick = (e) => { if (e.target.classList.contains('modal-back')) close(); };
+
+    $('#m-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const players = [...$$('.hand-player-row')].map(row => ({
+        pos:    row.querySelector('.hp-pos').value,
+        type:   row.querySelector('.hp-type').value,
+        cards:  row.querySelector('.hp-cards').value.trim(),
+        showed: row.querySelector('.hp-showed').checked,
+      }));
+      const payload = {
+        played_on:    $('#h-date').value,
+        stakes:       $('#h-stakes').value.trim(),
+        hero_position:$('#h-hero-pos').value,
+        hero_cards:   $('#h-hero-cards').value.trim(),
+        players,
+        preflop:      $('#h-preflop').value.trim(),
+        flop_board:   $('#h-flop-board').value.trim(),
+        flop_action:  $('#h-flop-action').value.trim(),
+        turn_card:    $('#h-turn-card').value.trim(),
+        turn_action:  $('#h-turn-action').value.trim(),
+        river_card:   $('#h-river-card').value.trim(),
+        river_action: $('#h-river-action').value.trim(),
+        result_notes: $('#h-result').value.trim(),
+        notes:        $('#h-notes').value.trim(),
+      };
+      const save = $('#m-save');
+      save.disabled = true; save.textContent = 'Guardando…';
+      try {
+        if (editing) {
+          const upd = await Db.updateHand(editing.id, payload);
+          const i = state.hands.findIndex(x => x.id === editing.id);
+          state.hands[i] = upd;
+        } else {
+          const created = await Db.addHand(state.user.id, payload);
+          state.hands.unshift(created);
+        }
+        close(); renderManos();
+      } catch(err) {
+        $('#m-banner').innerHTML = `<div class="banner error">${esc(err.message)}</div>`;
+        save.disabled = false; save.textContent = 'Reintentar';
+      }
+    };
+  }
+
+  function bindRemoveButtons() {
+    $$('.hp-remove').forEach(b => { b.onclick = () => b.closest('.hand-player-row').remove(); });
+  }
+
+  // ---- STUDY MODAL ----
+  function openStudyModal() {
+    const host = $('#modal-host');
+    const today = new Date().toISOString().slice(0, 10);
+    host.innerHTML = `<div class="modal-back"><div class="modal">
+      <h3>📚 Sesión de estudio
+        <button class="icon-btn" id="m-close">✕</button>
+      </h3>
+      <div id="m-banner"></div>
+      <form id="m-form">
+        <div class="form-grid">
+          <div class="field"><label>Fecha</label><input type="date" id="m-date" value="${today}" required></div>
+          <div class="field"><label>Horas de estudio</label><input type="number" step="0.25" min="0" id="m-study" placeholder="0" required></div>
+          <div class="field"><label>Manos analizadas</label><input type="number" min="0" id="m-hands" placeholder="0"></div>
+          <div class="field full"><label>Notas</label>
+            <textarea id="m-notes" rows="2" placeholder="Qué estudiaste, recursos, conceptos…"></textarea>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn btn-ghost" id="m-cancel">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="m-save">Guardar estudio</button>
+        </div>
+      </form>
+    </div></div>`;
+    const close = () => (host.innerHTML = '');
+    $('#m-close').onclick = close;
+    $('#m-cancel').onclick = close;
+    $('.modal-back').onclick = (e) => { if (e.target.classList.contains('modal-back')) close(); };
+    $('#m-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const payload = {
+        played_on: $('#m-date').value, mode: 'Estudio', site: '', stakes: '',
+        hours: 0, buyin: 0, cashout: 0, mood: 3,
+        study_hours: C.num($('#m-study').value),
+        hands_analyzed: C.num($('#m-hands').value),
+        notes: $('#m-notes').value.trim(),
+      };
+      const save = $('#m-save');
+      save.disabled = true; save.textContent = 'Guardando…';
+      try {
+        const created = await Db.addSession(state.user.id, payload);
+        state.sessions.push(created);
+        close(); renderAll();
+      } catch (err) {
+        $('#m-banner').innerHTML = `<div class="banner error">${esc(err.message)}</div>`;
+        save.disabled = false; save.textContent = 'Reintentar';
+      }
+    };
   }
 
   // ---- CSV ----

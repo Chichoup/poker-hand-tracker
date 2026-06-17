@@ -20,10 +20,11 @@
   //  MODO DEMO — localStorage
   // ============================================================
   const LS = {
-    SESS: 'pht_demo_sessions',
-    CFG:  'pht_demo_config',
-    USER: 'pht_demo_user',
-    uid:  'demo-user-0000-0000-0000-000000000000',
+    SESS:  'pht_demo_sessions',
+    CFG:   'pht_demo_config',
+    USER:  'pht_demo_user',
+    HANDS: 'pht_demo_hands',
+    uid:   'demo-user-0000-0000-0000-000000000000',
   };
   const DEMO_SESSIONS = [
     {id:'s01',played_on:'2026-05-03',mode:'Live',site:'Casino Buenos Aires',stakes:'1/3',hours:5.0,buyin:300,cashout:520,mood:4,study_hours:1.0,hands_analyzed:20,notes:'Buen día, value claro'},
@@ -88,6 +89,24 @@
       lsSet(LS.SESS, lsGet(LS.SESS, []).filter(x => x.id !== id));
       return Promise.resolve();
     },
+    loadHands(_uid) {
+      return Promise.resolve(lsGet(LS.HANDS, []));
+    },
+    addHand(uid, h) {
+      const rows = lsGet(LS.HANDS, []);
+      const created = { ...h, id: uuid(), user_id: uid, created_at: new Date().toISOString() };
+      lsSet(LS.HANDS, [created, ...rows]); return Promise.resolve(created);
+    },
+    updateHand(id, h) {
+      const rows = lsGet(LS.HANDS, []);
+      const i = rows.findIndex(x => x.id === id);
+      const upd = { ...rows[i], ...h }; rows[i] = upd;
+      lsSet(LS.HANDS, rows); return Promise.resolve(upd);
+    },
+    deleteHand(id) {
+      lsSet(LS.HANDS, lsGet(LS.HANDS, []).filter(x => x.id !== id));
+      return Promise.resolve();
+    },
   };
 
   // ============================================================
@@ -122,6 +141,10 @@
     Real.addSession = async (uid, s) => { const { data, error } = await sb.from('sessions').insert({ ...sanitize(s), user_id: uid }).select().single(); if (error) throw error; return data; };
     Real.updateSession = async (id, s) => { const { data, error } = await sb.from('sessions').update(sanitize(s)).eq('id', id).select().single(); if (error) throw error; return data; };
     Real.deleteSession = async (id) => { const { error } = await sb.from('sessions').delete().eq('id', id); if (error) throw error; };
+    Real.loadHands = async (uid) => { const { data, error } = await sb.from('hands').select('*').eq('user_id', uid).order('played_on', { ascending: false }).order('created_at', { ascending: false }); if (error) throw error; return data || []; };
+    Real.addHand = async (uid, h) => { const { data, error } = await sb.from('hands').insert({ ...h, user_id: uid }).select().single(); if (error) throw error; return data; };
+    Real.updateHand = async (id, h) => { const { data, error } = await sb.from('hands').update(h).eq('id', id).select().single(); if (error) throw error; return data; };
+    Real.deleteHand = async (id) => { const { error } = await sb.from('hands').delete().eq('id', id); if (error) throw error; };
   }
 
   const impl = REAL ? Real : Demo;
@@ -141,6 +164,10 @@
     addSession:     (uid, s) => impl.addSession(uid, s),
     updateSession:  (id, s)  => impl.updateSession(id, s),
     deleteSession:  (id)     => impl.deleteSession(id),
+    loadHands:      (uid)  => impl.loadHands(uid),
+    addHand:        (uid, h) => impl.addHand(uid, h),
+    updateHand:     (id, h)  => impl.updateHand(id, h),
+    deleteHand:     (id)     => impl.deleteHand(id),
     REAL_signUp:    REAL ? ((...a) => Real.signUp(...a)) : null,
   };
 })(window);

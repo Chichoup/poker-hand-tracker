@@ -1,20 +1,8 @@
-const CACHE = 'pht-v2';
-const ASSETS = [
-  '/',
-  '/index.html',
-  '/assets/css/styles.css',
-  '/assets/js/config.js',
-  '/assets/js/calc.js',
-  '/assets/js/db.js',
-  '/assets/js/app.js',
-  '/assets/js/chart.umd.min.js',
-  '/assets/js/supabase.umd.js'
-];
+const CACHE = 'pht-v3';
+const SHELL = ['/index.html'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ASSETS))
-  );
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
   self.skipWaiting();
 });
 
@@ -30,9 +18,16 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
-  // No interceptar llamadas a Supabase
   if (url.hostname.includes('supabase.co')) return;
+
+  // Network-first: siempre intenta red, caché solo como fallback
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
+    fetch(e.request)
+      .then(res => {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return res;
+      })
+      .catch(() => caches.match(e.request))
   );
 });

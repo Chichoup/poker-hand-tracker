@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poker Hand Tracker</title>
+<meta name="description" content="Tracker premium de sesiones de poker — bankroll, P&L, mental game y objetivos.">
+<!-- Inter desde Google Fonts (CDN, puede fallar en sandbox) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<!-- Fallback si la fuente no carga -->
+<style>body{font-family:'Inter','Segoe UI',system-ui,sans-serif}</style>
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+<!-- LOADER -->
+<div class="loader" id="loader"><div class="spinner"></div></div>
+
+<!-- ============================ AUTH ============================ -->
+<div class="auth-wrap hidden" id="auth-screen">
+  <div class="auth-card">
+    <div class="brand"><span class="chip">♠</span><span class="name">Poker Hand Tracker<small>Session Intelligence</small></span></div>
+    <p class="auth-sub">Tu bankroll, tus resultados y tu mental game — en serio.</p>
+
+    <div id="auth-banner"></div>
+
+    <div class="auth-tabs" id="auth-tabs">
+      <button id="tab-login" class="active">Iniciar sesión</button>
+      <button id="tab-register">Crear cuenta</button>
+    </div>
+
+    <form id="auth-form" autocomplete="on">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="auth-email" placeholder="tu@email.com" required>
+        <div class="err-msg" id="err-email"></div>
+      </div>
+      <div class="field">
+        <label>Contraseña</label>
+        <input type="password" id="auth-pass" placeholder="Mínimo 6 caracteres" required minlength="6">
+        <div class="err-msg" id="err-pass"></div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="auth-submit">Entrar</button>
+    </form>
+
+    <div class="auth-divider" id="demo-divider" style="display:none">— o —</div>
+    <button class="btn btn-ghost btn-block" id="demo-btn" style="display:none;margin-top:0">
+      🎮 Explorar en modo demo
+    </button>
+    <p class="auth-note" id="auth-sub-note"></p>
+  </div>
+</div>
+
+<!-- ============================ APP ============================ -->
+<!-- Scrim fuera del grid para no ocupar columna -->
+<div class="scrim" id="scrim"></div>
+
+<div class="app hidden" id="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><span class="chip">♠</span><span class="name">Poker Hand Tracker<small>Session Intelligence</small></span></div>
+    <nav class="nav" id="nav">
+      <a data-view="inicio" class="active"><span class="ico">🏠</span> Inicio</a>
+      <a data-view="registro"><span class="ico">📝</span> Registro</a>
+      <a data-view="dashboard"><span class="ico">📊</span> Dashboard</a>
+      <a data-view="mensual"><span class="ico">📅</span> Análisis mensual</a>
+      <a data-view="objetivos"><span class="ico">🎯</span> Objetivos</a>
+      <a data-view="mental"><span class="ico">🧠</span> Mental Game</a>
+      <a data-view="config"><span class="ico">⚙️</span> Config</a>
+    </nav>
+    <div class="side-foot">
+      <div class="side-user">
+        <span class="av" id="user-av">P</span>
+        <span class="em" id="user-email">—</span>
+        <span class="demo-badge hidden" id="demo-badge">DEMO</span>
+      </div>
+      <button class="btn btn-ghost btn-sm btn-block" id="logout-btn" style="margin-top:8px">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div style="display:flex;gap:14px;align-items:flex-start">
+        <button class="hamburger" id="hamburger">☰</button>
+        <div class="page-title"><h1 id="pg-title">Inicio</h1><p id="pg-sub"></p></div>
+      </div>
+      <div class="topbar-actions" id="topbar-actions"></div>
+    </div>
+
+    <!-- Banner demo (visible solo en modo demo) -->
+    <div class="banner warn hidden" id="demo-app-banner" style="margin-bottom:18px">
+      🎮 <b>Modo demo</b> — Los datos se guardan en tu navegador. Para usar con cuenta real, configurá Supabase en <code>assets/js/config.js</code>.
+    </div>
+
+    <!-- INICIO -->
+    <section class="view active" id="view-inicio">
+      <div class="kpi-grid" id="home-kpis"></div>
+      <div class="panel">
+        <h2>🎯 Progreso de objetivos — mes actual</h2>
+        <p class="desc">Enfocate en el proceso. Los resultados son consecuencia.</p>
+        <div id="home-goals"></div>
+      </div>
+    </section>
+
+    <!-- REGISTRO -->
+    <section class="view" id="view-registro">
+      <div class="panel">
+        <div class="table-tools">
+          <input class="search" id="flt-q" placeholder="🔎 Buscar (sitio, notas, stake)…">
+          <select id="flt-mode"><option value="">Modalidad</option><option>Live</option><option>Online</option></select>
+          <select id="flt-stake"><option value="">Stake</option></select>
+          <input type="month" id="flt-month" title="Filtrar por mes">
+          <button class="btn btn-ghost btn-sm" id="clear-filters">Limpiar</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Fecha</th><th>Modalidad</th><th>Sitio</th><th>Stakes</th><th>Horas</th>
+              <th>Buy-in</th><th>Cash-out</th><th>Resultado</th><th>Bankroll</th><th>Mood</th><th></th>
+            </tr></thead>
+            <tbody id="reg-body"></tbody>
+          </table>
+        </div>
+        <div class="empty hidden" id="reg-empty"><div class="big">🃏</div>No hay sesiones que coincidan.</div>
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section class="view" id="view-dashboard">
+      <div class="kpi-grid" id="dash-kpis"></div>
+      <div class="panel">
+        <h2>📈 Evolución del bankroll</h2>
+        <div class="chart-box" id="chart-bankroll-wrap"><canvas id="chart-bankroll"></canvas></div>
+      </div>
+      <div class="grid-2 section-gap">
+        <div class="panel" style="margin-top:0">
+          <h2>💰 P&amp;L por stake</h2>
+          <div class="chart-box sm" id="chart-stake-wrap"><canvas id="chart-stake"></canvas></div>
+        </div>
+        <div class="panel" style="margin-top:0">
+          <h2>🎭 Distribución de mood</h2>
+          <div class="chart-box sm" id="chart-mood-wrap"><canvas id="chart-mood"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MENSUAL -->
+    <section class="view" id="view-mensual">
+      <div class="panel" style="margin-top:0">
+        <h2>📅 Seleccionar mes</h2>
+        <p class="desc">Filtrá todas las métricas por mes.</p>
+        <input type="month" id="month-sel" style="padding:10px 14px;background:var(--bg-2);border:1px solid var(--accent);border-radius:12px;color:var(--text);font-size:15px">
+      </div>
+      <div class="kpi-grid section-gap" id="month-kpis"></div>
+    </section>
+
+    <!-- OBJETIVOS -->
+    <section class="view" id="view-objetivos">
+      <div class="panel" style="margin-top:0">
+        <h2>🎯 Objetivos de proceso — mes actual</h2>
+        <p class="desc">Meta vs. real, con delta y progreso. Estudio y manos se cargan en cada sesión.</p>
+        <div id="goals-full"></div>
+      </div>
+    </section>
+
+    <!-- MENTAL -->
+    <section class="view" id="view-mental">
+      <div id="mental-insight"></div>
+      <div class="kpi-grid section-gap" id="mental-kpis"></div>
+      <div class="panel">
+        <h2>🎚️ Escala de mood</h2>
+        <div class="scale-row"><span class="dot" style="background:#ff5d5d"></span> 1 — Tilt total · No debería jugar</div>
+        <div class="scale-row"><span class="dot" style="background:#ff8c42"></span> 2 — Mal estado mental</div>
+        <div class="scale-row"><span class="dot" style="background:#f5c518"></span> 3 — Neutral / OK</div>
+        <div class="scale-row"><span class="dot" style="background:#9be15d"></span> 4 — Buen estado mental</div>
+        <div class="scale-row"><span class="dot" style="background:#00ff88"></span> 5 — A-Game · Estado óptimo</div>
+      </div>
+    </section>
+
+    <!-- CONFIG -->
+    <section class="view" id="view-config">
+      <div class="panel" style="margin-top:0">
+        <h2>⚙️ Configuración del jugador</h2>
+        <p class="desc">Estos valores alimentan todos los cálculos de la app.</p>
+        <div id="cfg-banner"></div>
+        <form id="cfg-form">
+          <div class="cfg-grid">
+            <div class="field"><label>Nombre / Alias</label><input id="cfg-name"></div>
+            <div class="field"><label>Moneda</label>
+              <select id="cfg-currency"><option>USD</option><option>EUR</option><option>ARS</option><option>GBP</option><option>BRL</option></select>
+            </div>
+            <div class="field"><label>Bankroll inicial</label><input type="number" step="0.01" id="cfg-bankroll"></div>
+            <div class="field"><label>Stake habitual</label><select id="cfg-stake"></select></div>
+            <div class="field"><label>Objetivo horas / mes</label><input type="number" id="cfg-goal-hours"></div>
+            <div class="field"><label>Objetivo sesiones / mes</label><input type="number" id="cfg-goal-sessions"></div>
+            <div class="field"><label>Objetivo estudio (h/mes)</label><input type="number" id="cfg-goal-study"></div>
+            <div class="field"><label>Objetivo manos analizadas</label><input type="number" id="cfg-goal-hands"></div>
+          </div>
+          <h2 style="margin-top:22px">🎚️ BB sizes por stake</h2>
+          <p class="desc">Para calcular BB/100 (25 manos/h live · 75 manos/h online).</p>
+          <div class="bb-grid" id="cfg-bb"></div>
+          <div class="modal-foot" style="justify-content:flex-start">
+            <button type="submit" class="btn btn-primary">Guardar configuración</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- MODAL host -->
+<div id="modal-host"></div>
+
+<!-- ============================ SCRIPTS (locales, sin CDN) ============================ -->
+<script src="assets/js/chart.umd.min.js"></script>
+<script src="assets/js/supabase.umd.js"></script>
+<script src="assets/js/config.js"></script>
+<script src="assets/js/calc.js"></script>
+<script src="assets/js/db.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

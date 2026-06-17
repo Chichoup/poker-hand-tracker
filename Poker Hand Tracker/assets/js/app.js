@@ -22,14 +22,19 @@
   function parseCards(str) {
     return ((str||'').match(/[AKQJTakqjt2-9][cdhs]/gi)||[]).map(c=>c[0].toUpperCase()+c[1].toLowerCase());
   }
+  const SUIT_SYMS = {c:'♣',d:'♦',h:'♥',s:'♠'};
   function renderCards(str, mini) {
     const cards = parseCards(str);
     if (!cards.length) return '';
-    const cls = mini ? 'crd crd-mini' : 'crd';
+    const cls = 'crd' + (mini ? ' crd-mini' : '');
     return `<div class="cards-inline">${cards.map(c=>{
-      const suit=c.slice(-1), rank=c.slice(0,-1), s=CARD_SUITS.find(x=>x.key===suit);
-      return `<div class="${cls} suit-${suit}">${rank}<span>${s?.sym||suit}</span></div>`;
+      const suit=c.slice(-1), rank=c.slice(0,-1), sym=SUIT_SYMS[suit]||suit;
+      return `<div class="${cls} suit-${suit}"><div class="crd-tl">${rank}<span>${sym}</span></div><div class="crd-mid">${sym}</div></div>`;
     }).join('')}</div>`;
+  }
+  function cardBacks(n, mini) {
+    const cls = 'crd crd-back' + (mini ? ' crd-mini' : '');
+    return `<div class="cards-inline">${Array(n||1).fill(0).map(()=>`<div class="${cls}"></div>`).join('')}</div>`;
   }
   function openCardPicker(inputEl, max, fmt) {
     const current = parseCards(inputEl.value);
@@ -45,7 +50,7 @@
       overlay.innerHTML = `<div class="card-picker-modal">
         <div class="card-picker-head">
           <div class="card-picker-sel">
-            ${selected.length ? selected.map(c=>{const s=CARD_SUITS.find(x=>x.key===c.slice(-1));return `<div class="crd suit-${c.slice(-1)}">${c.slice(0,-1)}<span>${s?.sym||''}</span></div>`;}).join('')
+            ${selected.length ? selected.map(c=>{const suit=c.slice(-1),rank=c.slice(0,-1),sym=SUIT_SYMS[suit]||suit;return `<div class="crd crd-mini suit-${suit}"><div class="crd-tl">${rank}<span>${sym}</span></div><div class="crd-mid">${sym}</div></div>`;}).join('')
               : '<span style="color:var(--muted);font-size:13px">Ninguna</span>'}
             <span style="color:var(--faint);font-size:12px;margin-left:6px">${selected.length}/${max}</span>
           </div>
@@ -887,6 +892,112 @@
   const POSITIONS = ['UTG','UTG+1','UTG+2','MP','MP+1','HJ','CO','BTN','SB','BB'];
   const PLAYER_TYPES = ['Desconocido','Fish agresivo','Fish pasivo','Regular agresivo','Regular pasivo','Nit','Maniac','LAG','TAG'];
 
+  const TYPE_COLORS = {
+    'Fish agresivo':'#e74c3c','Fish pasivo':'#e67e22','Regular agresivo':'#3498db',
+    'Regular pasivo':'#9b59b6','Nit':'#95a5a6','Maniac':'#c0392b','LAG':'#f39c12','TAG':'#2980b9','Desconocido':'#5b5f6a'
+  };
+
+  function pokerTableSvg(h) {
+    const W=520, H=270, cx=W/2, cy=H/2;
+    const rx=164, ry=90, prx=216, pry=120;
+    const POS_DEG = {'BB':0,'UTG':36,'UTG+1':72,'UTG+2':108,'MP':144,'MP+1':180,'HJ':216,'CO':252,'BTN':288,'SB':324};
+    const heroRaw = POS_DEG[h.hero_position] ?? 288;
+    const rot = 180 - heroRaw;
+    const ang = pos => (((POS_DEG[pos]??0) + rot) % 360 + 360) % 360;
+    const posXY = (deg, rx_, ry_) => {
+      const r = (deg - 90) * Math.PI / 180;
+      return { x: cx + rx_ * Math.cos(r), y: cy + ry_ * Math.sin(r) };
+    };
+    const SC = {c:'#1a7a30',d:'#cc1111',h:'#cc1111',s:'#111827'};
+    const SS = {c:'♣',d:'♦',h:'♥',s:'♠'};
+
+    function mCard(card, x, y, w=22, h_=31) {
+      const suit=card.slice(-1), rank=card.slice(0,-1), col=SC[suit]||'#333', sym=SS[suit]||'?';
+      return `<rect x="${x}" y="${y}" width="${w}" height="${h_}" rx="3.5" fill="#faf9f0" stroke="rgba(0,0,0,.18)" stroke-width=".6"/>
+        <text x="${x+w*.5}" y="${y+h_*.36}" text-anchor="middle" font-size="${w*.44}" font-weight="bold" fill="${col}" font-family="Georgia,serif">${rank}</text>
+        <text x="${x+w*.5}" y="${y+h_*.72}" text-anchor="middle" font-size="${w*.5}" fill="${col}" font-family="Georgia,serif">${sym}</text>`;
+    }
+    function mBacks(n, x, y, w=16, h_=22) {
+      return Array(n).fill(0).map((_,i)=>`<rect x="${x+i*(w*.65)}" y="${y}" width="${w}" height="${h_}" rx="2.5" fill="#1a3a7a" stroke="rgba(255,255,255,.12)" stroke-width=".5"/>
+        <rect x="${x+i*(w*.65)+2}" y="${y+2}" width="${w-4}" height="${h_-4}" rx="1.5" fill="none" stroke="rgba(255,255,255,.2)" stroke-width=".5"/>`).join('');
+    }
+
+    let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-height:215px">
+      <defs>
+        <radialGradient id="tblFelt${h.id||0}" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#1e5c30"/><stop offset="100%" stop-color="#0d2e18"/></radialGradient>
+      </defs>
+      <ellipse cx="${cx}" cy="${cy+5}" rx="${rx+14}" ry="${ry+14}" fill="rgba(0,0,0,.35)"/>
+      <ellipse cx="${cx}" cy="${cy}" rx="${rx+12}" ry="${ry+12}" fill="#3d2008"/>
+      <ellipse cx="${cx}" cy="${cy}" rx="${rx+10}" ry="${ry+10}" fill="none" stroke="rgba(255,200,100,.08)" stroke-width="1.5"/>
+      <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#tblFelt${h.id||0})"/>
+      <ellipse cx="${cx}" cy="${cy-8}" rx="${rx*.5}" ry="${ry*.3}" fill="rgba(255,255,255,.022)"/>`;
+
+    // Board cards center
+    const bCards = [...parseCards(h.flop_board||''), ...parseCards(h.turn_card||''), ...parseCards(h.river_card||'')];
+    if (bCards.length) {
+      const cw=24, ch=34, g=5; const tw=bCards.length*(cw+g)-g; let bx=cx-tw/2;
+      bCards.forEach((c,i)=>{ if(i===3)bx+=6; s+=mCard(c,bx,cy-ch/2,cw,ch); bx+=cw+g; });
+    } else {
+      s+=`<text x="${cx}" y="${cy+5}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.13)" font-family="Inter,sans-serif" letter-spacing=".12em">COMUNIDAD</text>`;
+    }
+
+    // Hero seat (always at bottom)
+    const hxy = posXY(180, prx, pry);
+    s+=`<circle cx="${hxy.x}" cy="${hxy.y}" r="25" fill="rgba(0,255,136,.1)" stroke="#00ff88" stroke-width="1.5"/>`;
+    s+=`<text x="${hxy.x}" y="${hxy.y-7}" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#00ff88" font-family="Inter,sans-serif">${esc(h.hero_position||'?')}</text>`;
+    s+=`<text x="${hxy.x}" y="${hxy.y+5}" text-anchor="middle" font-size="7.5" fill="rgba(0,255,136,.55)" font-family="Inter,sans-serif">Hero</text>`;
+    const hc = parseCards(h.hero_cards||'');
+    if (hc.length) {
+      const cw=18,ch=25,tw=hc.length*(cw+2)-2;
+      hc.forEach((c,i)=>{ s+=mCard(c, hxy.x-tw/2+i*(cw+2), hxy.y+12, cw, ch); });
+    }
+
+    // Rival seats
+    (h.players||[]).forEach(p=>{
+      const a=ang(p.pos);
+      const xy=posXY(a,prx,pry);
+      const col=TYPE_COLORS[p.type]||'#5b5f6a';
+      s+=`<circle cx="${xy.x}" cy="${xy.y}" r="21" fill="rgba(0,0,0,.28)" stroke="${col}" stroke-width="1"/>`;
+      s+=`<text x="${xy.x}" y="${xy.y-4}" text-anchor="middle" font-size="9" font-weight="bold" fill="rgba(255,255,255,.88)" font-family="Inter,sans-serif">${esc(p.pos)}</text>`;
+      const typeShort = (p.type||'?').replace(' agresivo',' Ag').replace(' pasivo',' Ps');
+      s+=`<text x="${xy.x}" y="${xy.y+7}" text-anchor="middle" font-size="7" fill="${col}" font-family="Inter,sans-serif">${esc(typeShort)}</text>`;
+      const pc=parseCards(p.cards||'');
+      if(pc.length && p.showed!==false) { const cw=14,ch=20,tw=pc.length*(cw+1)-1; pc.forEach((c,i)=>{s+=mCard(c,xy.x-tw/2+i*(cw+1),xy.y+11,cw,ch);}); }
+      else if(pc.length) { s+=mBacks(pc.length, xy.x-11, xy.y+11, 13, 18); }
+    });
+
+    s+='</svg>';
+    return s;
+  }
+
+  function streetLine(lbl, cards, action, skipCards) {
+    if (!cards && !action) return '';
+    return `<div class="hs-row">
+      <span class="hs-lbl">${lbl}</span>
+      ${cards && !skipCards ? renderCards(cards, true) : ''}
+      ${action ? `<span class="hs-act">${esc(action.slice(0,90))}${action.length>90?'…':''}</span>` : ''}
+    </div>`;
+  }
+
+  function heroAndRivalsRow(h) {
+    const rivals = (h.players||[]).map(p => {
+      const pc = parseCards(p.cards||'');
+      const cardHtml = pc.length ? (p.showed !== false ? renderCards(p.cards, true) : cardBacks(pc.length, true)) : '';
+      return `<div class="hc-seat rival">
+        <span class="hc-pos-badge rival">${esc(p.pos)}</span>
+        <span class="hc-type">${esc(p.type||'?')}</span>
+        ${cardHtml}
+      </div>`;
+    }).join('');
+    return `<div class="hc-seats-row">
+      <div class="hc-seat hero">
+        <span class="hc-pos-badge hero">${esc(h.hero_position||'?')}</span>
+        ${h.hero_cards ? renderCards(h.hero_cards) : ''}
+      </div>
+      ${rivals ? `<span class="hc-vs">vs</span>${rivals}` : ''}
+    </div>`;
+  }
+
   function renderManos() {
     const q = ($('#hand-flt-q')?.value || '').toLowerCase();
     const cl = $('#hand-clear');
@@ -902,41 +1013,37 @@
     });
 
     $('#hands-empty').classList.toggle('hidden', rows.length > 0);
+
+    const hasBoardOrPlayers = h => parseCards(h.flop_board||'').length || (h.players||[]).length || h.hero_cards;
+
     $('#hands-list').innerHTML = rows.map(h => {
-      const streetRow = (lbl, cards, action) => {
-        if (!cards && !action) return '';
-        return `<div class="hs-row">
-          <span class="hs-lbl">${lbl}</span>
-          ${cards ? renderCards(cards) : ''}
-          ${action ? `<span class="hs-act">${esc(action.slice(0,80))}${action.length>80?'…':''}</span>` : ''}
-        </div>`;
-      };
-      const players = (h.players||[]).map(p => {
-        const cardHtml = p.cards ? (p.showed !== false ? renderCards(p.cards, true) : '<span style="color:var(--faint);font-size:11px">no mostró</span>') : '';
-        return `<span class="hand-player-tag">${esc(p.pos)}: <b>${esc(p.type||'?')}</b>${cardHtml ? ' → ' : ''}${cardHtml}</span>`;
-      }).join('');
+      const useSvg = hasBoardOrPlayers(h);
+      const skipBoardInStreets = useSvg;
 
       return `<div class="hand-card${h.reviewed?' reviewed':''}">
         <div class="hand-card-head">
           <div class="hand-card-meta">
-            <span class="mono" style="font-size:12px;color:var(--muted)">${esc(h.played_on)}</span>
+            <span class="hc-date mono">${esc(h.played_on)}</span>
             ${h.stakes ? `<span class="pill online">${esc(h.stakes)}</span>` : ''}
-            ${h.hero_position ? `<span style="font-size:12px;color:var(--muted)">Hero: <b style="color:var(--text)">${esc(h.hero_position)}</b></span>` : ''}
           </div>
-          <div style="display:flex;gap:6px;align-items:center">
-            <button class="btn btn-sm ${h.reviewed?'btn-reviewed':'btn-ghost'} btn-rev-toggle" data-hrev="${esc(h.id)}">${h.reviewed?'✅ Revisada':'Revisar'}</button>
-            <button class="icon-btn" data-hedit="${esc(h.id)}">✎</button>
-            <button class="icon-btn danger" data-hdel="${esc(h.id)}">🗑</button>
+          <div class="hc-actions">
+            <button class="rev-toggle${h.reviewed?' is-reviewed':''}" data-hrev="${esc(h.id)}">
+              <div class="rev-box-icon">${h.reviewed?'✓':''}</div>
+              ${h.reviewed?'Revisada':'Revisar'}
+            </button>
+            <button class="icon-btn" data-hedit="${esc(h.id)}" title="Editar">✎</button>
+            <button class="icon-btn danger" data-hdel="${esc(h.id)}" title="Eliminar">🗑</button>
           </div>
         </div>
-        ${h.hero_cards ? streetRow('HERO', h.hero_cards, '') : ''}
-        ${h.preflop ? `<div class="hs-row"><span class="hs-lbl">PRE</span><span class="hs-act">${esc(h.preflop.slice(0,90))}${h.preflop.length>90?'…':''}</span></div>` : ''}
-        ${streetRow('FLOP', h.flop_board, h.flop_action)}
-        ${streetRow('TURN', h.turn_card, h.turn_action)}
-        ${streetRow('RIVER', h.river_card, h.river_action)}
-        ${h.result_notes ? `<div class="hs-row"><span class="hs-lbl">RES</span><span class="hs-act">${esc(h.result_notes.slice(0,90))}${h.result_notes.length>90?'…':''}</span></div>` : ''}
-        ${players ? `<div class="hand-players-row" style="margin-top:8px">${players}</div>` : ''}
-        ${h.notes ? `<div class="hand-notes-preview">📝 ${esc(h.notes.slice(0,100))}${h.notes.length>100?'…':''}</div>` : ''}
+        ${useSvg ? `<div class="hc-table">${pokerTableSvg(h)}</div>` : heroAndRivalsRow(h)}
+        <div class="hc-streets">
+          ${streetLine('PRE', null, h.preflop)}
+          ${streetLine('FLOP', h.flop_board, h.flop_action, skipBoardInStreets)}
+          ${streetLine('TURN', h.turn_card, h.turn_action, skipBoardInStreets)}
+          ${streetLine('RIVER', h.river_card, h.river_action, skipBoardInStreets)}
+          ${streetLine('RES', null, h.result_notes)}
+        </div>
+        ${h.notes ? `<div class="hc-notes">📝 ${esc(h.notes.slice(0,120))}${h.notes.length>120?'…':''}</div>` : ''}
       </div>`;
     }).join('');
 

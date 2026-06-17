@@ -121,7 +121,8 @@ code{
   display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:12px;
   color:var(--muted);font-weight:600;font-size:13.5px;transition:.16s;cursor:pointer;
 }
-.nav a .ico{width:20px;text-align:center;font-size:16px}
+.nav a .ico{width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.nav a .ico svg{width:20px;height:20px;display:block}
 .nav a:hover{background:var(--surface);color:var(--text)}
 .nav a.active{background:linear-gradient(135deg,rgba(0,255,136,.16),rgba(0,255,136,.04));color:var(--accent);box-shadow:inset 0 0 0 1px rgba(0,255,136,.18)}
 .nav a.active .ico{filter:drop-shadow(0 0 6px rgba(0,255,136,.5))}
@@ -279,20 +280,44 @@ tbody tr:last-child td{border-bottom:none}
 .cp-btn:hover:not(:disabled){ border-color:var(--sc);transform:translateY(-2px);background:rgba(255,255,255,.09) }
 .cp-btn.sel{ background:var(--sc)!important;color:#0a0a0b!important;border-color:var(--sc) }
 .cp-btn.excl{ opacity:.2;cursor:not-allowed }
-/* Card badges display */
+/* ---- Playing card badges ---- */
 .crd{
-  display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
-  width:32px;height:42px;border-radius:6px;background:#fff;color:#1a1a1a;
-  font-weight:800;font-size:13px;line-height:1;box-shadow:0 2px 6px rgba(0,0,0,.4);
-  border:2px solid #ccc;
+  display:inline-flex;flex-direction:column;justify-content:space-between;
+  width:38px;height:52px;border-radius:7px;flex-shrink:0;cursor:default;
+  background:linear-gradient(145deg,#faf9f0,#f0eed8);
+  border:1px solid rgba(0,0,0,.12);
+  box-shadow:0 3px 8px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.7);
+  padding:3px 4px 4px;
 }
-.crd span{ font-size:10px }
-.crd.suit-h,.crd.suit-d{ color:#e74c3c }
-.crd.suit-c{ color:#27ae60 }
-.crd.suit-s{ color:#1a1a2e }
+.crd-tl{
+  font-family:'Georgia','Times New Roman',serif;
+  font-weight:bold;font-size:11px;line-height:1;
+  display:flex;flex-direction:column;align-items:flex-start;
+}
+.crd-tl span{font-size:9px;line-height:1.1}
+.crd-mid{font-family:'Georgia','Times New Roman',serif;font-size:20px;line-height:1;align-self:center}
+.crd.suit-h .crd-tl,.crd.suit-h .crd-mid{color:#c81010}
+.crd.suit-d .crd-tl,.crd.suit-d .crd-mid{color:#c81010}
+.crd.suit-c .crd-tl,.crd.suit-c .crd-mid{color:#155a12}
+.crd.suit-s .crd-tl,.crd.suit-s .crd-mid{color:#0f1726}
+.crd.crd-mini{width:24px;height:34px;border-radius:5px;padding:2px 3px 3px}
+.crd.crd-mini .crd-tl{font-size:8.5px}
+.crd.crd-mini .crd-tl span{font-size:7px}
+.crd.crd-mini .crd-mid{font-size:14px}
+.crd.crd-back{
+  background:linear-gradient(135deg,#1a3a7a,#2050b8);
+  border:1px solid rgba(255,255,255,.14);
+  align-items:center;justify-content:center;
+}
+.crd.crd-back::after{
+  content:"";width:22px;height:30px;border-radius:3px;
+  border:1.5px solid rgba(255,255,255,.22);
+  background:repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(255,255,255,.05) 3px,rgba(255,255,255,.05) 6px);
+}
+.crd.crd-mini.crd-back::after{width:14px;height:20px}
 @media(max-width:640px){
-  .cp-btn{ width:26px;height:36px;font-size:10px;border-radius:5px }
-  .cp-btn span{ font-size:9px }
+  .cp-btn{width:26px;height:36px;font-size:10px;border-radius:5px}
+  .cp-btn span{font-size:9px}
 }
 
 /* ---------- Hand sections (modal) ---------- */
@@ -311,43 +336,66 @@ tbody tr:last-child td{border-bottom:none}
 /* ---------- Hand cards (list view) ---------- */
 .hand-card{
   background:linear-gradient(170deg,rgba(255,255,255,.045),rgba(255,255,255,.01));
-  border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-bottom:12px;
-  transition:.18s;
+  border:1px solid var(--border);border-radius:18px;padding:16px 18px;margin-bottom:14px;
+  transition:.2s;
 }
-.hand-card:hover{ border-color:var(--border-strong) }
-.hand-card-head{ display:flex;justify-content:space-between;align-items:center;margin-bottom:10px }
-.hand-card-meta{ display:flex;align-items:center;gap:10px;flex-wrap:wrap }
-.hand-cards-row{ display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap }
-.hand-cards-hero{
-  font-size:18px;font-weight:800;letter-spacing:.04em;
-  background:linear-gradient(135deg,var(--accent),var(--accent-dim));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+.hand-card:hover{border-color:var(--border-strong);transform:translateY(-1px)}
+.hand-card.reviewed{opacity:.48;border-color:rgba(0,255,136,.18)}
+.hand-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px}
+.hand-card-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hc-date{font-size:12px;color:var(--muted)}
+.hc-actions{display:flex;align-items:center;gap:7px;flex-shrink:0}
+
+/* Reviewed toggle */
+.rev-toggle{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 10px 5px 8px;border-radius:8px;
+  border:1.5px solid var(--border-strong);
+  background:transparent;color:var(--muted);
+  font-size:12px;font-weight:600;cursor:pointer;
+  transition:.18s;font-family:inherit;
 }
-.hand-board-display{ font-size:14px;color:var(--muted);font-weight:600;letter-spacing:.06em }
-.hand-players-row{ display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px }
-.hand-player-tag{
-  font-size:11.5px;padding:3px 9px;border-radius:8px;
-  background:var(--surface-2);border:1px solid var(--border);color:var(--muted);
+.rev-toggle:hover{border-color:rgba(0,255,136,.5);color:var(--accent)}
+.rev-box-icon{
+  width:15px;height:15px;border-radius:4px;border:1.5px solid currentColor;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:900;line-height:1;flex-shrink:0;
 }
-.hand-player-tag b{ color:var(--text) }
-.hand-notes-preview{ font-size:12px;color:var(--faint);font-style:italic;margin-top:8px }
+.rev-toggle.is-reviewed{
+  border-color:rgba(0,255,136,.4);
+  background:rgba(0,255,136,.1);
+  color:var(--accent);
+}
+.rev-toggle.is-reviewed .rev-box-icon{
+  background:var(--accent);border-color:var(--accent);color:#04140b;
+}
+
+/* SVG Poker table */
+.hc-table{margin:0 0 12px;border-radius:14px;overflow:hidden;background:var(--bg)}
+/* Seats row fallback (no board) */
+.hc-seats-row{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:10px 12px;background:var(--surface);border-radius:10px;margin-bottom:12px;
+}
+.hc-seat{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.hc-pos-badge{
+  padding:3px 9px;border-radius:7px;font-size:11px;font-weight:800;letter-spacing:.03em;white-space:nowrap;
+}
+.hc-pos-badge.hero{background:rgba(0,255,136,.18);color:var(--accent);border:1px solid rgba(0,255,136,.3)}
+.hc-pos-badge.rival{background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
+.hc-type{font-size:11px;color:var(--muted)}
+.hc-vs{color:var(--faint);font-size:12px;font-weight:700;letter-spacing:.08em}
 /* Street rows */
-.hs-row{ display:flex;align-items:center;gap:8px;padding:4px 0;flex-wrap:wrap }
+.hc-streets{display:flex;flex-direction:column;gap:2px}
+.hs-row{display:flex;align-items:center;gap:8px;padding:4px 0;flex-wrap:wrap}
 .hs-lbl{
-  flex-shrink:0;font-size:9.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
-  background:rgba(0,255,136,.12);color:var(--accent);border-radius:5px;padding:2px 7px;
+  flex-shrink:0;font-size:9px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  background:rgba(0,255,136,.1);color:var(--accent);border-radius:5px;padding:2px 7px;
 }
-.hs-act{ font-size:12.5px;color:var(--muted);line-height:1.4 }
+.hs-act{font-size:12.5px;color:var(--muted);line-height:1.4}
+.hc-notes{font-size:12px;color:var(--faint);font-style:italic;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
 /* Cards inline */
-.cards-inline{ display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap }
-.crd-mini{ width:22px!important;height:30px!important;font-size:10px!important;border-radius:4px!important }
-.crd-mini span{ font-size:8px!important }
-/* Reviewed state */
-.hand-card.reviewed{ opacity:.55;border-color:rgba(0,255,136,.2) }
-.btn-reviewed{
-  background:rgba(0,255,136,.15)!important;border:1px solid rgba(0,255,136,.4)!important;
-  color:var(--accent)!important;
-}
+.cards-inline{display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap}
 
 /* ---------- Loader ---------- */
 .loader{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);z-index:100}
